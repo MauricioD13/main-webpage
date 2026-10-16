@@ -1,0 +1,288 @@
+---
+import Base from "../../../layouts/Base.astro";
+import BookCover from "../../../components/BookCover.astro";
+import Rating from "../../../components/Rating.astro";
+import type { Lang } from "../../../i18n/ui";
+import { entrySlug, getLocalizedEntries, localePath, useTranslations } from "../../../i18n/utils";
+import { localeStaticPaths } from "../../../lib/paths";
+
+export const getStaticPaths = localeStaticPaths;
+
+const lang = Astro.params.lang as Lang;
+const t = useTranslations(lang);
+const statusOrder = { reading: 0, finished: 1, queued: 2 } as const;
+const items = (await getLocalizedEntries("books", lang)).sort(
+  (a, b) => statusOrder[a.entry.data.status] - statusOrder[b.entry.data.status] || b.entry.data.date.valueOf() - a.entry.data.date.valueOf(),
+);
+const shelves = (["tech", "business"] as const).map((category) => ({
+  category,
+  label: t(`books.${category}`),
+  books: items.filter((i) => i.entry.data.category === category),
+}));
+const palette = ["#1c3f73", "#2f5d50", "#7a3b2e", "#4a4f6a", "#6b5a2a", "#3b2f55"];
+// Spine size follows page count so the shelf looks like a real one.
+const spine = (pages = 320) => ({
+  h: Math.round(Math.min(300, Math.max(210, 180 + pages / 5))),
+  w: Math.round(Math.min(58, Math.max(34, 22 + pages / 18))),
+});
+---
+
+<Base lang={lang} title={t("books.title")} description={t("books.lede")} alternates={{ en: localePath("en", "books"), es: localePath("es", "books") }} section="books">
+  <div class="mx-auto max-w-6xl px-4 pt-14 sm:px-6 lg:pt-20">
+    <h1 class="display text-[clamp(2.6rem,6vw,4.4rem)]">{t("books.title")}</h1>
+    <p class="measure mt-5 text-lg leading-relaxed text-ink-soft">{t("books.lede")}</p>
+
+    {
+      items.length === 0 ? (
+        <p class="mt-16 border-y border-rule py-10 text-lg text-ink-soft italic">{t("books.empty")}</p>
+      ) : (
+        <>
+          <div class="filters ui mt-10" role="group" aria-label={t("books.filter")} data-filters hidden>
+            {(["all", "tech", "business"] as const).map((f, i) => (
+              <button type="button" data-filter={f} aria-pressed={i === 0 ? "true" : "false"}>
+                {t(`books.${f}`)}
+              </button>
+            ))}
+          </div>
+
+          {shelves.map(
+            (shelf) =>
+              shelf.books.length > 0 && (
+                <section class="shelf-block mt-12" data-shelf={shelf.category} aria-labelledby={`shelf-${shelf.category}`}>
+                  <h2 id={`shelf-${shelf.category}`} class="ui text-sm text-ink-soft">
+                    {shelf.label}
+                  </h2>
+                  <ul class="shelf">
+                    {shelf.books.map(({ entry }, i) => {
+                      const d = entry.data;
+                      const s = spine(d.book.pages);
+                      const color = d.spine ?? palette[i % palette.length];
+                      return (
+                        <li class="spine-wrap">
+                          <a
+                            href={localePath(lang, `books/${entrySlug(entry.id)}`)}
+                            class="spine"
+                            style={`--h:${s.h}px;--w:${s.w}px;--cloth:${color}`}
+                            data-book={entry.id}
+                            aria-describedby={`status-${entry.id.replace("/", "-")}`}
+                          >
+                            <span class="spine-title">{d.book.title}</span>
+                            <span class="spine-author ui">{d.book.author.split(",")[0]}</span>
+                            {d.status === "reading" && <span class="bookmark" aria-hidden="true" />}
+                          </a>
+                          <span id={`status-${entry.id.replace("/", "-")}`} class="sr-only">
+                            {t(`books.${d.status}`)}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              ),
+          )}
+
+          {items.map(({ entry }, i) => {
+            const d = entry.data;
+            return (
+              <template data-detail={entry.id}>
+                <div class="pulled">
+                  <BookCover book={d.book} color={d.spine ?? palette[i % palette.length]} class="pulled-cover" />
+                  <div class="pulled-body">
+                    <p class="ui text-sm text-ink-soft">{t(`books.${d.status}`)}</p>
+                    <h3 class="display mt-1 text-3xl">{d.book.title}</h3>
+                    <p class="mt-1 text-ink-soft italic">
+                      {t("books.by")} {d.book.author}
+                      {d.book.year && `, ${d.book.year}`}
+                    </p>
+                    {d.rating !== undefined && (
+                      <p class="ui mt-3 flex items-center gap-2 text-sm">
+                        <Rating value={d.rating} label={t("books.rating")} />
+                      </p>
+                    )}
+                    {d.takeaways.length > 0 && (
+                      <ul class="mt-4 list-disc space-y-1 pl-5 leading-relaxed">
+                        {d.takeaways.slice(0, 3).map((k) => (
+                          <li>{k}</li>
+                        ))}
+                      </ul>
+                    )}
+                    <div class="ui mt-6 flex flex-wrap items-center gap-5 text-sm">
+                      <a href={localePath(lang, `books/${entrySlug(entry.id)}`)} class="font-semibold text-ink">
+                        {t("books.open")}
+                      </a>
+                      <button type="button" data-close class="text-ink-soft underline-offset-4 hover:underline">
+                        {t("books.close")}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            );
+          })}
+          <div class="detail mt-10" data-detail-slot aria-live="polite" />
+        </>
+      )
+    }
+  </div>
+</Base>
+
+<style>
+  .filters {
+    display: flex;
+    gap: 0.4rem;
+  }
+  .filters:not([hidden]) {
+    display: flex;
+  }
+  .filters button {
+    padding: 0.35rem 0.8rem;
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+  .filters button[aria-pressed="true"] {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--paper);
+  }
+  .shelf {
+    list-style: none;
+    margin: 0.75rem 0 0;
+    padding: 0 0.75rem;
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    min-height: 320px;
+    border-bottom: 12px solid var(--paper-raised);
+    box-shadow: 0 10px 0 -4px var(--rule);
+    perspective: 900px;
+    overflow-x: auto;
+    overflow-y: visible;
+    padding-top: 24px;
+  }
+  .spine {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    width: var(--w);
+    height: var(--h);
+    padding: 0.9rem 0;
+    background:
+      linear-gradient(90deg, rgb(0 0 0 / 0.22), transparent 18%, transparent 82%, rgb(0 0 0 / 0.25)),
+      var(--cloth);
+    color: #f2f4f3;
+    border-radius: 2px 2px 0 0;
+    text-decoration: none;
+    transform-origin: 50% 100%;
+    transition:
+      transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1),
+      box-shadow 0.35s;
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.06);
+  }
+  /* Spines read top to bottom, as on most English-language books. */
+  .spine-title {
+    writing-mode: vertical-rl;
+    font-family: var(--font-serif);
+    font-size: 0.86rem;
+    line-height: 1.15;
+    max-height: calc(var(--h) - 5.5rem);
+    max-width: calc(var(--w) - 8px);
+    overflow: hidden;
+    text-wrap: balance;
+  }
+  .spine-author {
+    writing-mode: vertical-rl;
+    font-size: 0.66rem;
+    opacity: 0.8;
+    white-space: nowrap;
+    max-height: 4rem;
+    overflow: hidden;
+  }
+  .bookmark {
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    width: 8px;
+    height: 26px;
+    margin-left: -4px;
+    background: var(--signal);
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%);
+  }
+  .spine:hover,
+  .spine:focus-visible,
+  .spine[aria-expanded="true"] {
+    transform: translateY(-14px) rotateX(-8deg);
+    box-shadow:
+      inset 0 0 0 1px rgb(255 255 255 / 0.12),
+      0 18px 22px -14px rgb(0 0 0 / 0.55);
+  }
+  .shelf-block[hidden] {
+    display: none;
+  }
+  .detail :global(.pulled) {
+    display: grid;
+    gap: 2rem;
+    padding: 2rem 0;
+    border-top: 1px solid var(--rule);
+  }
+  .detail :global(.pulled-cover) {
+    width: 11rem;
+  }
+  @media (min-width: 640px) {
+    .detail :global(.pulled) {
+      grid-template-columns: 11rem minmax(0, 36rem);
+    }
+  }
+</style>
+
+<script>
+  import { gsap, reducedMotion } from "../../../scripts/motion";
+
+  const slot = document.querySelector<HTMLElement>("[data-detail-slot]");
+  const filters = document.querySelector<HTMLElement>("[data-filters]");
+
+  if (slot) {
+    let open: HTMLAnchorElement | null = null;
+    const close = () => {
+      open?.setAttribute("aria-expanded", "false");
+      open?.focus();
+      open = null;
+      slot.replaceChildren();
+    };
+    for (const spine of document.querySelectorAll<HTMLAnchorElement>("[data-book]")) {
+      spine.setAttribute("aria-expanded", "false");
+      spine.addEventListener("click", (e) => {
+        e.preventDefault();
+        if (open === spine) return close();
+        open?.setAttribute("aria-expanded", "false");
+        open = spine;
+        spine.setAttribute("aria-expanded", "true");
+        const tpl = document.querySelector<HTMLTemplateElement>(`template[data-detail="${spine.dataset.book}"]`)!;
+        slot.replaceChildren(tpl.content.cloneNode(true));
+        slot.querySelector("[data-close]")?.addEventListener("click", close);
+        // The book slides off the shelf: cover rises from where the spine was.
+        if (!reducedMotion()) {
+          gsap.from(slot.querySelector(".pulled-cover"), { y: -40, rotationY: -70, opacity: 0, transformPerspective: 800, transformOrigin: "0% 50%", duration: 0.6, ease: "power3.out" });
+          gsap.from(slot.querySelector(".pulled-body"), { opacity: 0, x: 16, duration: 0.5, delay: 0.15 });
+        }
+        slot.scrollIntoView({ block: "nearest", behavior: reducedMotion() ? "auto" : "smooth" });
+      });
+    }
+  }
+
+  if (filters) {
+    filters.hidden = false;
+    const buttons = [...filters.querySelectorAll<HTMLButtonElement>("[data-filter]")];
+    for (const btn of buttons) {
+      btn.addEventListener("click", () => {
+        buttons.forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
+        const f = btn.dataset.filter;
+        document.querySelectorAll<HTMLElement>("[data-shelf]").forEach((s) => (s.hidden = f !== "all" && s.dataset.shelf !== f));
+      });
+    }
+  }
+</script>

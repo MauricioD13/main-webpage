@@ -1,0 +1,65 @@
+---
+// A typeset cover for books without artwork: cloth colour, title, author.
+import type { CollectionEntry } from "astro:content";
+import { Image } from "astro:assets";
+
+interface Props {
+  book: CollectionEntry<"books">["data"]["book"];
+  color?: string;
+  class?: string;
+}
+const { book, color = "#1c3f73", class: className } = Astro.props;
+---
+
+<div class:list={["cover", className]} style={`--cloth:${color}`}>
+  {
+    book.cover ? (
+      <Image src={book.cover} alt="" widths={[240, 480]} sizes="240px" class="h-full w-full object-cover" />
+    ) : (
+      <div class="cover-type">
+        <span class="cover-title">{book.title}</span>
+        <span class="cover-rule" />
+        <span class="cover-author ui">{book.author}</span>
+      </div>
+    )
+  }
+</div>
+
+<style>
+  .cover {
+    container-type: inline-size;
+    aspect-ratio: 2 / 3;
+    background: var(--cloth);
+    color: #f2f4f3;
+    border-radius: 2px 5px 5px 2px;
+    overflow: hidden;
+    box-shadow:
+      inset 6px 0 0 rgb(0 0 0 / 0.18),
+      inset 7px 0 0 rgb(255 255 255 / 0.12),
+      0 14px 30px -18px rgb(0 0 0 / 0.6);
+  }
+  .cover-type {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 7cqi;
+    padding: 11cqi 9cqi 9cqi 12cqi;
+  }
+  .cover-title {
+    font-family: var(--font-serif);
+    font-size: 11.5cqi;
+    line-height: 1.12;
+    font-weight: 450;
+    text-wrap: balance;
+  }
+  .cover-rule {
+    width: 2rem;
+    border-top: 1px solid rgb(242 244 243 / 0.6);
+  }
+  .cover-author {
+    margin-top: auto;
+    font-size: max(0.62rem, 6.5cqi);
+    line-height: 1.35;
+    opacity: 0.85;
+  }
+</style>

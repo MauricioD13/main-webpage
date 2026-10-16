@@ -1,0 +1,142 @@
+---
+import { getEntries, render } from "astro:content";
+import Base from "../../../layouts/Base.astro";
+import BookCover from "../../../components/BookCover.astro";
+import Rating from "../../../components/Rating.astro";
+import FallbackNotice from "../../../components/FallbackNotice.astro";
+import { langs, type Lang } from "../../../i18n/ui";
+import { entryLang, entrySlug, formatDate, getAlternates, getLocalizedEntries, localePath, useTranslations } from "../../../i18n/utils";
+import { toRoman } from "../../../lib/roman";
+
+export async function getStaticPaths() {
+  const paths = [];
+  for (const lang of langs)
+    for (const { entry, fallback } of await getLocalizedEntries("books", lang))
+      paths.push({ params: { lang, slug: entrySlug(entry.id) }, props: { entry, fallback } });
+  return paths;
+}
+
+const { entry, fallback } = Astro.props;
+const lang = Astro.params.lang as Lang;
+const t = useTranslations(lang);
+const { Content } = await render(entry);
+const d = entry.data;
+const alternates = await getAlternates("books", "books", d.translationKey);
+// Related chapters are referenced in the entry's own language; link them under the reader's locale.
+const related = (await getEntries(d.relatedChapters)).filter(Boolean);
+---
+
+<Base lang={lang} canonicalPath={fallback ? alternates.en : undefined} title={d.book.title} description={`${d.title}. ${d.takeaways[0] ?? ""}`} alternates={alternates} runningHead={d.book.title} ogType="article" section="books">
+  <article data-reading class="mx-auto max-w-5xl px-4 pt-12 sm:px-6 lg:pt-20" lang={fallback ? entryLang(entry.id) : lang}>
+    <a href={localePath(lang, "books")} class="ui text-sm text-ink-soft no-underline hover:text-ink">{t("post.back")}: {t("books.title")}</a>
+    <div class="mt-8 grid gap-10 md:grid-cols-[14rem_minmax(0,1fr)] md:gap-14">
+      <div>
+        <BookCover book={d.book} color={d.spine} class="book-cover w-44 md:w-full" />
+        <dl class="ui mt-6 space-y-3 text-sm">
+          <div>
+            <dt class="text-ink-soft">{t(`books.${d.category}`)}</dt>
+            <dd>{t(`books.${d.status}`)}</dd>
+          </div>
+          {
+            d.rating !== undefined && (
+              <div>
+                <dt class="text-ink-soft">{t("books.rating")}</dt>
+                <dd class="mt-1">
+                  <Rating value={d.rating} label={t("books.rating")} />
+                </dd>
+              </div>
+            )
+          }
+          {
+            d.book.pages && (
+              <div>
+                <dd>
+                  {d.book.pages} {t("books.pages")}
+                </dd>
+              </div>
+            )
+          }
+        </dl>
+      </div>
+      <div>
+        <h1 class="display text-[clamp(2.2rem,5vw,3.6rem)] text-balance">{d.book.title}</h1>
+        <p class="mt-3 text-xl text-ink-soft italic">
+          {t("books.by")} {d.book.author}{d.book.year && `, ${d.book.year}`}
+        </p>
+        {fallback && <FallbackNotice lang={lang} />}
+
+        {
+          d.takeaways.length > 0 && (
+            <section class="mt-12">
+              <h2 class="ui text-sm text-ink-soft">{t("books.takeaways")}</h2>
+              <ul class="takeaways mt-4">
+                {d.takeaways.map((k) => (
+                  <li>{k}</li>
+                ))}
+              </ul>
+            </section>
+          )
+        }
+
+        <div class="prose-book mt-10">
+          <Content />
+        </div>
+
+        {
+          d.quotes.length > 0 && (
+            <section class="mt-12">
+              <h2 class="ui text-sm text-ink-soft">{t("books.quotes")}</h2>
+              {d.quotes.map((q) => (
+                <blockquote class="quote">{q}</blockquote>
+              ))}
+            </section>
+          )
+        }
+
+        {
+          related.length > 0 && (
+            <section class="mt-12 border-t border-rule pt-6">
+              <h2 class="ui text-sm text-ink-soft">{t("books.related")}</h2>
+              <ul class="mt-3 space-y-2">
+                {related.map((c) => (
+                  <li>
+                    <a href={localePath(lang, `chapters/${entrySlug(c!.id)}`)} class="text-lg">
+                      {t("chapter.label")} {toRoman(c!.data.chapter)}. {c!.data.title}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )
+        }
+        <p class="ui mt-10 text-sm text-ink-soft">{formatDate(d.date, lang, { day: "numeric" })}</p>
+      </div>
+    </div>
+  </article>
+</Base>
+
+<style>
+  /* Takeaways aren't a sequence, so no numbers: each sits on its own ruled line. */
+  .takeaways {
+    list-style: none;
+    padding: 0;
+  }
+  .takeaways li {
+    padding: 0.9rem 0 0.9rem 1rem;
+    border-bottom: 1px solid var(--rule);
+    box-shadow: inset 2px 0 0 var(--accent);
+    font-size: 1.15rem;
+    line-height: 1.5;
+  }
+  .quote {
+    margin: 1.25rem 0;
+    padding-left: 1.1rem;
+    border-left: 3px solid var(--signal);
+    font-size: 1.3rem;
+    line-height: 1.45;
+    font-style: italic;
+  }
+  .book-cover {
+    view-transition-name: book-cover;
+  }
+</style>

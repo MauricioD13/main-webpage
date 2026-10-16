@@ -1,0 +1,30 @@
+---
+interface Props {
+  value: number;
+  label: string;
+}
+const { value, label } = Astro.props;
+---
+
+<span class="rating" role="img" aria-label={`${label}: ${value} / 5`}>
+  {
+    [1, 2, 3, 4, 5].map((i) => (
+      <span class="pip" style={`--fill:${Math.max(0, Math.min(1, value - i + 1)) * 100}%`} />
+    ))
+  }
+</span>
+
+<style>
+  .rating {
+    display: inline-flex;
+    gap: 3px;
+    vertical-align: middle;
+  }
+  .pip {
+    width: 0.75rem;
+    height: 0.75rem;
+    border: 1px solid var(--ink-soft);
+    background: linear-gradient(90deg, var(--signal) var(--fill), transparent var(--fill));
+    transform: rotate(45deg) scale(0.8);
+  }
+</style>
