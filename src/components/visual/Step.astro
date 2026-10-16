@@ -1,0 +1,60 @@
+---
+// One beat of a chapter's story. While it sits in the reading zone, the plate on the
+// stage reveals `show`, highlights `focus`, and switches to `panel` if given.
+interface Props {
+  /** Comma-separated element ids (nodes, groups, or "from-to" edges) revealed at this step. */
+  show?: string;
+  /** Comma-separated ids highlighted at this step. Chart steps use data labels. */
+  focus?: string;
+  /** Which stage panel this step drives; defaults to the previous step's. */
+  panel?: string;
+}
+const { show = "", focus = "", panel } = Astro.props;
+---
+
+<div class="step" data-step data-show={show} data-focus={focus} data-panel-target={panel}>
+  <div class="step-body prose-book">
+    <slot />
+  </div>
+</div>
+
+<style>
+  .step {
+    padding: 1.5rem 0;
+  }
+  .step-body > :global(*:first-child) {
+    margin-top: 0;
+  }
+  .step-body > :global(*:last-child) {
+    margin-bottom: 0;
+  }
+  :global([data-scrolly].is-live) .step {
+    min-height: 62vh;
+    display: flex;
+    align-items: center;
+  }
+  :global([data-scrolly].is-live) .step-body {
+    transition: opacity 0.4s ease;
+    opacity: 0.32;
+  }
+  :global([data-scrolly].is-live) .step.is-active .step-body {
+    opacity: 1;
+  }
+  .step:first-child {
+    padding-top: 0;
+  }
+  @media (max-width: 1023px) {
+    :global([data-scrolly].is-live) .step {
+      min-height: 70vh;
+      align-items: flex-start;
+    }
+    :global([data-scrolly].is-live) .step-body {
+      background: var(--paper);
+      padding: 1rem 1.1rem;
+      border: 1px solid var(--rule);
+      border-radius: 4px;
+      position: relative;
+      z-index: 2;
+    }
+  }
+</style>

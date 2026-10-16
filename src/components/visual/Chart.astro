@@ -1,0 +1,314 @@
+---
+// Line or bar chart printed as a plate. Draws itself when it becomes visible (or when its
+// Scrolly step activates it), and shows exact values under the cursor or finger.
+import type { ChartPoint } from "./types";
+
+interface Props {
+  type?: "line" | "bar";
+  data: ChartPoint[];
+  /** Optional second series drawn as a dashed "before" line / ghost bars. */
+  compare?: ChartPoint[];
+  seriesLabel?: string;
+  compareLabel?: string;
+  title: string;
+  caption?: string;
+  unit?: string;
+  yMax?: number;
+  plate?: string | number;
+  panel?: string;
+  slot?: string;
+}
+
+const {
+  type = "line",
+  data,
+  compare,
+  seriesLabel = "",
+  compareLabel = "",
+  title,
+  caption,
+  unit = "",
+  yMax,
+  plate,
+  panel = "main",
+} = Astro.props;
+
+const W = 640;
+const H = 340;
+const pad = { t: 24, r: 20, b: 44, l: 52 };
+const iw = W - pad.l - pad.r;
+const ih = H - pad.t - pad.b;
+const max = yMax ?? Math.max(...data.map((d) => d.value), ...(compare ?? []).map((d) => d.value)) * 1.1;
+const n = data.length;
+const xAt = (i: number) => (type === "bar" ? pad.l + (iw / n) * (i + 0.5) : pad.l + (n === 1 ? iw / 2 : (iw / (n - 1)) * i));
+const yAt = (v: number) => pad.t + ih - (v / max) * ih;
+const linePath = (pts: ChartPoint[]) => pts.map((p, i) => `${i ? "L" : "M"}${xAt(i).toFixed(1)},${yAt(p.value).toFixed(1)}`).join(" ");
+const areaPath = (pts: ChartPoint[]) => `${linePath(pts)} L${xAt(pts.length - 1)},${pad.t + ih} L${xAt(0)},${pad.t + ih} Z`;
+const ticks = Array.from({ length: 5 }, (_, i) => (max / 4) * i);
+const fmt = (v: number) => `${Number.isInteger(v) ? v : v.toFixed(1)}${unit}`;
+const barW = Math.min(46, (iw / n) * 0.56);
+const labelEvery = Math.ceil(n / 8);
+const uid = `c-${Math.random().toString(36).slice(2, 8)}`;
+---
+
+<figure class="plate blueprint chart" data-chart data-panel={panel} data-type={type} data-values={JSON.stringify(data.map((d) => d.value))} data-labels={JSON.stringify(data.map((d) => d.label))} data-unit={unit}>
+  <div class="plate-head ui">
+    <span>{title}</span>
+    {plate !== undefined && <span class="plate-no">{plate}</span>}
+  </div>
+  <svg viewBox={`0 0 ${W} ${H}`} aria-hidden="true" class="chart-svg">
+    <defs>
+      <linearGradient id={`${uid}-fill`} x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0" stop-color="#d9e6f0" stop-opacity="0.28"></stop>
+        <stop offset="1" stop-color="#d9e6f0" stop-opacity="0"></stop>
+      </linearGradient>
+    </defs>
+    {
+      ticks.map((t) => (
+        <g>
+          <line x1={pad.l} x2={W - pad.r} y1={yAt(t)} y2={yAt(t)} class="grid" />
+          <text x={pad.l - 10} y={yAt(t) + 4} text-anchor="end" class="axis">
+            {fmt(Math.round(t))}
+          </text>
+        </g>
+      ))
+    }
+    {
+      data.map((d, i) =>
+        i % labelEvery === 0 ? (
+          <text x={xAt(i)} y={H - pad.b + 22} text-anchor="middle" class="axis" data-x-label={i}>
+            {d.label}
+          </text>
+        ) : null,
+      )
+    }
+
+    {
+      type === "line" ? (
+        <g>
+          {compare && <path d={linePath(compare)} class="compare-line" fill="none" />}
+          <path d={areaPath(data)} fill={`url(#${uid}-fill)`} class="area" />
+          <path d={linePath(data)} class="series-line" fill="none" />
+          {data.map((d, i) => (
+            <circle cx={xAt(i)} cy={yAt(d.value)} r="3.5" class="pt" data-i={i} data-label={d.label} />
+          ))}
+        </g>
+      ) : (
+        <g>
+          {compare?.map((d, i) => (
+            <rect x={xAt(i) - barW / 2 - 6} y={yAt(d.value)} width={barW} height={pad.t + ih - yAt(d.value)} class="compare-bar" />
+          ))}
+          {data.map((d, i) => (
+            <rect x={xAt(i) - barW / 2} y={yAt(d.value)} width={barW} height={pad.t + ih - yAt(d.value)} class="bar" data-i={i} data-label={d.label} />
+          ))}
+        </g>
+      )
+    }
+    <line class="cross" x1="0" x2="0" y1={pad.t} y2={pad.t + ih} opacity="0"></line>
+  </svg>
+  <div class="readout ui" aria-hidden="true" hidden></div>
+  {
+    (seriesLabel || compareLabel) && (
+      <div class="legend ui">
+        {seriesLabel && (
+          <span>
+            <i class="key key-series" />
+            {seriesLabel}
+          </span>
+        )}
+        {compare && compareLabel && (
+          <span>
+            <i class="key key-compare" />
+            {compareLabel}
+          </span>
+        )}
+      </div>
+    )
+  }
+  {caption && <figcaption class="ui">{caption}</figcaption>}
+  <table class="sr-only">
+    <caption>{title}</caption>
+    <thead>
+      <tr>
+        <th scope="col">Label</th>
+        <th scope="col">{seriesLabel || "Value"}</th>
+        {compare && <th scope="col">{compareLabel || "Compare"}</th>}
+      </tr>
+    </thead>
+    <tbody>
+      {
+        data.map((d, i) => (
+          <tr>
+            <th scope="row">{d.label}</th>
+            <td>{fmt(d.value)}</td>
+            {compare && <td>{compare[i] ? fmt(compare[i].value) : ""}</td>}
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+</figure>
+
+<style>
+  .chart-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    font-family: var(--font-sans);
+    font-variation-settings: "wdth" 85;
+    touch-action: pan-y;
+  }
+  .grid {
+    stroke: #d9e6f0;
+    stroke-opacity: 0.14;
+  }
+  .axis {
+    fill: #d9e6f0;
+    opacity: 0.75;
+    font-size: 13px;
+  }
+  .series-line {
+    stroke: #f2f4f3;
+    stroke-width: 2.4;
+    stroke-linejoin: round;
+  }
+  .compare-line {
+    stroke: #d9e6f0;
+    stroke-opacity: 0.55;
+    stroke-width: 1.6;
+    stroke-dasharray: 5 5;
+  }
+  .pt {
+    fill: var(--plate);
+    stroke: #f2f4f3;
+    stroke-width: 1.6;
+    transition: r 0.2s, fill 0.2s;
+  }
+  .bar {
+    fill: #d9e6f0;
+    fill-opacity: 0.85;
+    transition: fill 0.25s;
+  }
+  .compare-bar {
+    fill: none;
+    stroke: #d9e6f0;
+    stroke-opacity: 0.5;
+    stroke-dasharray: 3 3;
+  }
+  .pt.is-focus,
+  .pt.is-hover {
+    fill: var(--signal);
+    stroke: var(--signal);
+    r: 6;
+  }
+  .bar.is-focus,
+  .bar.is-hover {
+    fill: var(--signal);
+    fill-opacity: 1;
+  }
+  .cross {
+    stroke: var(--signal);
+    stroke-dasharray: 2 4;
+  }
+  .readout {
+    position: absolute;
+    top: 2.6rem;
+    right: 1.2rem;
+    font-size: 0.82rem;
+    padding: 0.3rem 0.55rem;
+    background: rgb(14 35 66 / 0.85);
+    border-left: 3px solid var(--signal);
+    border-radius: 2px;
+    font-variant-numeric: tabular-nums;
+  }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.2rem;
+    font-size: 0.78rem;
+    opacity: 0.85;
+    padding: 0.2rem 0.2rem 0;
+  }
+  .legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+  .key {
+    display: inline-block;
+    width: 1.4rem;
+    border-top: 2.4px solid #f2f4f3;
+  }
+  .key-compare {
+    border-top: 1.6px dashed rgb(217 230 240 / 0.7);
+  }
+</style>
+
+<script>
+  import { gsap, ScrollTrigger, reducedMotion } from "../../scripts/motion";
+  import type { PlateState } from "./types";
+
+  for (const fig of document.querySelectorAll<HTMLElement>("figure[data-chart]")) {
+    const svg = fig.querySelector("svg")!;
+    const values: number[] = JSON.parse(fig.dataset.values!);
+    const labels: string[] = JSON.parse(fig.dataset.labels!);
+    const unit = fig.dataset.unit ?? "";
+    const marks = [...fig.querySelectorAll<SVGElement>("[data-i]")];
+    const cross = fig.querySelector<SVGLineElement>(".cross")!;
+    const readout = fig.querySelector<HTMLElement>(".readout")!;
+    const line = fig.querySelector<SVGPathElement>(".series-line");
+    const inScrolly = !!fig.closest("[data-scrolly]");
+
+    // Draw-in timeline: line strokes on left to right, bars grow from the baseline.
+    let drawn = false;
+    const tl = gsap.timeline({ paused: true });
+    if (!reducedMotion()) {
+      if (line) {
+        const len = line.getTotalLength();
+        gsap.set(line, { strokeDasharray: len, strokeDashoffset: len });
+        tl.to(line, { strokeDashoffset: 0, duration: 1.4, ease: "power2.inOut" })
+          .from(fig.querySelector(".area"), { opacity: 0, duration: 0.6 }, "-=0.6")
+          .from(marks, { opacity: 0, duration: 0.2, stagger: 0.03 }, 0.2);
+      } else {
+        tl.from(marks, { scaleY: 0, transformOrigin: "50% 100%", duration: 0.7, stagger: 0.05, ease: "power3.out" });
+      }
+    }
+    const draw = () => {
+      if (drawn) return;
+      drawn = true;
+      tl.play();
+    };
+    if (inScrolly) fig.addEventListener("plate:active", draw);
+    else ScrollTrigger.create({ trigger: fig, start: "top 75%", once: true, onEnter: draw });
+
+    fig.addEventListener("plate:state", (ev) => {
+      draw();
+      const focus = new Set((ev as CustomEvent<PlateState>).detail.focus);
+      marks.forEach((m) => m.classList.toggle("is-focus", focus.has(m.dataset.label!)));
+    });
+
+    // Cursor/finger readout: snap to the nearest data point.
+    const pt = svg.createSVGPoint();
+    const xs = marks.map((m) => Number(m.getAttribute("cx") ?? Number(m.getAttribute("x")) + Number(m.getAttribute("width")) / 2));
+    const move = (e: PointerEvent) => {
+      pt.x = e.clientX;
+      pt.y = e.clientY;
+      const p = pt.matrixTransform(svg.getScreenCTM()!.inverse());
+      let i = 0;
+      xs.forEach((x, j) => Math.abs(x - p.x) < Math.abs(xs[i] - p.x) && (i = j));
+      marks.forEach((m, j) => m.classList.toggle("is-hover", j === i));
+      cross.setAttribute("x1", String(xs[i]));
+      cross.setAttribute("x2", String(xs[i]));
+      cross.setAttribute("opacity", "1");
+      readout.hidden = false;
+      readout.textContent = `${labels[i]}: ${values[i]}${unit}`;
+    };
+    svg.addEventListener("pointermove", move);
+    svg.addEventListener("pointerdown", move);
+    svg.addEventListener("pointerleave", () => {
+      marks.forEach((m) => m.classList.remove("is-hover"));
+      cross.setAttribute("opacity", "0");
+      readout.hidden = true;
+    });
+  }
+</script>

@@ -1,0 +1,392 @@
+---
+// A data-driven architecture "plate": white-on-Prussian blueprint with official AWS icons.
+// Standalone it draws itself in when scrolled into view; inside <Scrolly> its steps decide
+// which components are shown and which are in focus (see Scrolly.astro).
+import { awsIcons } from "./icons";
+import { edgeId, type Diagram, type DiagramI18n } from "./types";
+
+interface Props {
+  diagram: Diagram;
+  title: string;
+  caption?: string;
+  /** Plate number shown in the corner, like a figure plate in a book. */
+  plate?: string | number;
+  /** Panel id when several plates share one Scrolly stage. */
+  panel?: string;
+  /** false = a decorative thumbnail: no tooltips, no focus stops, no draw-in. */
+  interactive?: boolean;
+  /** Translated labels/notes by element id; edges are keyed "from-to". */
+  i18n?: DiagramI18n;
+  slot?: string;
+}
+
+const { diagram, title, caption, plate, panel = "main", interactive = true, i18n = {} } = Astro.props;
+const width = diagram.width;
+const height = diagram.height;
+const nodes = diagram.nodes.map((n) => ({ ...n, ...i18n[n.id] }));
+const groups = (diagram.groups ?? []).map((g) => ({ ...g, ...i18n[g.id] }));
+const edges = diagram.edges.map((e) => ({ ...e, label: i18n[edgeId(e)]?.label ?? e.label }));
+const DEFAULT = 52;
+const byId = new Map(nodes.map((n) => [n.id, n]));
+const uid = `d-${Math.random().toString(36).slice(2, 8)}`;
+
+// Shorten a polyline so it starts/ends at the icon's edge rather than its centre.
+function edgePath(from: string, to: string, via: [number, number][] = []) {
+  const a = byId.get(from);
+  const b = byId.get(to);
+  if (!a || !b) throw new Error(`ArchDiagram "${title}": edge ${from} → ${to} references a missing node`);
+  const pts: [number, number][] = [[a.x, a.y], ...via, [b.x, b.y]];
+  const trim = (p: [number, number], q: [number, number], d: number): [number, number] => {
+    const dx = q[0] - p[0];
+    const dy = q[1] - p[1];
+    const len = Math.hypot(dx, dy) || 1;
+    // Never trim past the next bend.
+    const k = Math.min(d, len - 2) / len;
+    return [p[0] + dx * k, p[1] + dy * k];
+  };
+  // Node labels sit under the icon, so lines leaving downward (or arriving upward) clear them.
+  const LABEL = 42;
+  const clear = (p: [number, number], q: [number, number], size: number) =>
+    size / 2 + (q[1] - p[1] > Math.abs(q[0] - p[0]) ? LABEL : 6);
+  pts[0] = trim(pts[0], pts[1], clear(pts[0], pts[1], a.size ?? DEFAULT));
+  const n = pts.length - 1;
+  pts[n] = trim(pts[n], pts[n - 1], clear(pts[n], pts[n - 1], b.size ?? DEFAULT) + 4);
+  const d = pts.map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
+  // Label the longest segment; vertical segments get the label beside the line.
+  let best = 0;
+  for (let i = 1; i < pts.length - 1; i++)
+    if (Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]) > Math.hypot(pts[best + 1][0] - pts[best][0], pts[best + 1][1] - pts[best][1])) best = i;
+  const [p, q] = [pts[best], pts[best + 1]];
+  const vertical = Math.abs(q[0] - p[0]) < Math.abs(q[1] - p[1]);
+  return {
+    d,
+    label: vertical
+      ? { x: p[0] + 9, y: (p[1] + q[1]) / 2 + 4, anchor: "start" }
+      : { x: (p[0] + q[0]) / 2, y: (p[1] + q[1]) / 2 - 8, anchor: "middle" },
+  };
+}
+
+const groupStyle = {
+  cloud: { dash: "", opacity: 0.9 },
+  region: { dash: "7 5", opacity: 0.7 },
+  vpc: { dash: "", opacity: 0.75 },
+  zone: { dash: "3 5", opacity: 0.6 },
+  subnet: { dash: "", opacity: 0.45 },
+  external: { dash: "2 6", opacity: 0.55 },
+};
+
+// Split long labels into at most two lines.
+function lines(label: string) {
+  if (label.length <= 14 || !label.includes(" ")) return [label];
+  const words = label.split(" ");
+  let best = 1;
+  let bestDiff = Infinity;
+  for (let i = 1; i < words.length; i++) {
+    const diff = Math.abs(words.slice(0, i).join(" ").length - words.slice(i).join(" ").length);
+    if (diff < bestDiff) [best, bestDiff] = [i, diff];
+  }
+  return [words.slice(0, best).join(" "), words.slice(best).join(" ")];
+}
+
+const description = `${title}. Components: ${nodes.map((n) => n.label).join(", ")}. Connections: ${edges
+  .map((e) => `${byId.get(e.from)?.label} to ${byId.get(e.to)?.label}${e.label ? ` (${e.label})` : ""}`)
+  .join("; ")}.`;
+---
+
+<figure class="plate blueprint" data-diagram={interactive ? "" : undefined} data-panel={panel} aria-hidden={interactive ? undefined : "true"}>
+  <div class="plate-head ui">
+    <span>{title}</span>
+    {plate !== undefined && <span class="plate-no">{plate}</span>}
+  </div>
+  <svg
+    viewBox={`0 0 ${width} ${height}`}
+    role="img"
+    aria-labelledby={`${uid}-t ${uid}-d`}
+    class="plate-svg"
+  >
+    <title id={`${uid}-t`}>{title}</title>
+    <desc id={`${uid}-d`}>{description}</desc>
+    <defs>
+      <marker id={`${uid}-arrow`} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,1 L9,5 L0,9" fill="none" stroke="currentColor" stroke-width="1.6"></path>
+      </marker>
+    </defs>
+
+    {
+      groups.map((g) => {
+        const s = groupStyle[g.kind ?? "zone"];
+        return (
+          <g class="d-group" data-el={g.id}>
+            <rect
+              x={g.x}
+              y={g.y}
+              width={g.w}
+              height={g.h}
+              rx="6"
+              fill={g.kind === "subnet" ? "rgb(217 230 240 / 0.05)" : "none"}
+              stroke="currentColor"
+              stroke-opacity={s.opacity}
+              stroke-dasharray={s.dash}
+              stroke-width="1.2"
+            />
+            <text x={g.x + 12} y={g.labelAt === "bottom" ? g.y + g.h - 10 : g.y + 22} class="d-group-label">
+              {g.label}
+            </text>
+          </g>
+        );
+      })
+    }
+
+    {
+      edges.map((e) => {
+        const { d, label } = edgePath(e.from, e.to, e.via);
+        return (
+          <g class="d-edge" data-el={edgeId(e)} data-from={e.from} data-to={e.to}>
+            <path d={d} class="d-edge-line" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray={e.dashed ? "5 5" : undefined} marker-end={`url(#${uid}-arrow)`} />
+            <path d={d} class="d-edge-flow" fill="none" stroke-width="2.4" />
+            {e.label && (
+              <text x={label.x} y={label.y} text-anchor={label.anchor} class="d-edge-label">
+                {e.label}
+              </text>
+            )}
+          </g>
+        );
+      })
+    }
+
+    {
+      nodes.map((n) => {
+        const size = n.size ?? DEFAULT;
+        const Icon = n.icon ? awsIcons[n.icon] : undefined;
+        const note = interactive ? n.note : undefined;
+        const x = n.x - size / 2;
+        const y = n.y - size / 2;
+        return (
+          <g class="d-node" data-el={n.id} data-note={note} data-label={n.label} tabindex={note ? 0 : undefined} role={note ? "button" : undefined} aria-label={note ? `${n.label}: ${note}` : undefined}>
+            <rect class="d-node-halo" x={x - 7} y={y - 7} width={size + 14} height={size + 14} rx="8" />
+            {Icon ? (
+              <g class="d-icon">
+                <Icon x={x} y={y} size={size} />
+              </g>
+            ) : (
+              <g class="d-glyph">
+                <rect x={x} y={y} width={size} height={size} rx={size / 2} />
+                <text x={n.x} y={n.y + 5} text-anchor="middle">
+                  {n.glyph ?? n.label.slice(0, 2)}
+                </text>
+              </g>
+            )}
+            {lines(n.label).map((line, i) => (
+              <text x={n.x} y={n.y + size / 2 + 20 + i * 17} text-anchor="middle" class="d-node-label">
+                {line}
+              </text>
+            ))}
+          </g>
+        );
+      })
+    }
+  </svg>
+  {caption && <figcaption class="ui">{caption}</figcaption>}
+  <div class="d-tip ui" role="status" aria-live="polite" hidden></div>
+</figure>
+
+<style>
+  .plate-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+    font-family: var(--font-sans);
+    font-variation-settings: "wdth" 85;
+  }
+  .d-group-label {
+    fill: currentColor;
+    font-size: 14px;
+    opacity: 0.8;
+  }
+  .d-edge {
+    color: var(--plate-line);
+  }
+  .d-edge-label {
+    fill: currentColor;
+    font-size: 13px;
+    opacity: 0.85;
+    paint-order: stroke;
+    stroke: var(--plate);
+    stroke-width: 5px;
+  }
+  .d-edge-flow {
+    stroke: var(--signal);
+    stroke-dasharray: 4 14;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .d-node-label {
+    fill: currentColor;
+    font-size: 15px;
+    paint-order: stroke;
+    stroke: var(--plate);
+    stroke-width: 5px;
+  }
+  .d-node-halo {
+    fill: var(--plate);
+    stroke: var(--signal);
+    stroke-width: 2;
+    stroke-opacity: 0;
+    transition: stroke-opacity 0.3s;
+  }
+  .d-glyph rect {
+    fill: var(--plate-deep);
+    stroke: currentColor;
+    stroke-width: 1.5;
+  }
+  .d-glyph text {
+    fill: currentColor;
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .d-node[tabindex] {
+    cursor: help;
+    outline: none;
+  }
+  .d-node[tabindex]:focus-visible .d-node-halo {
+    stroke-opacity: 1;
+  }
+  .d-node,
+  .d-edge,
+  .d-group {
+    transition: opacity 0.45s ease;
+  }
+  .d-icon {
+    transition: filter 0.45s ease;
+  }
+
+  /* Staged by a Scrolly: hidden → shown (exposed, desaturated) → focus (developed, full colour). */
+  :global(.plate.is-staged) .d-node,
+  :global(.plate.is-staged) .d-edge,
+  :global(.plate.is-staged) .d-group {
+    opacity: 0.07;
+  }
+  :global(.plate.is-staged) .is-shown {
+    opacity: 1;
+  }
+  :global(.plate.is-staged) .d-node.is-shown .d-icon {
+    filter: grayscale(1) contrast(0.9) brightness(1.25);
+  }
+  :global(.plate.has-focus) .d-node.is-shown:not(.is-focus) {
+    opacity: 0.55;
+  }
+  :global(.plate.has-focus) .d-edge.is-shown:not(.is-focus) {
+    opacity: 0.35;
+  }
+  :global(.plate) .d-node.is-focus .d-icon {
+    filter: none;
+  }
+  :global(.plate) .d-node.is-focus .d-node-halo {
+    stroke-opacity: 1;
+  }
+  :global(.plate) .d-edge.is-focus .d-edge-flow {
+    opacity: 1;
+    animation: flow 1.1s linear infinite;
+  }
+  @keyframes flow {
+    to {
+      stroke-dashoffset: -18;
+    }
+  }
+
+  .d-tip {
+    position: absolute;
+    z-index: 5;
+    max-width: 16rem;
+    padding: 0.55rem 0.7rem;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    color: #18202b;
+    background: #f2f4f3;
+    border-left: 3px solid var(--signal);
+    border-radius: 3px;
+    box-shadow: 0 10px 24px -10px rgb(0 0 0 / 0.5);
+    pointer-events: none;
+  }
+  .d-tip strong {
+    display: block;
+    font-weight: 600;
+  }
+</style>
+
+<script>
+  import { gsap, ScrollTrigger, reducedMotion, pointerTilt } from "../../scripts/motion";
+  import type { PlateState } from "./types";
+
+  for (const fig of document.querySelectorAll<HTMLElement>("figure[data-diagram]")) {
+    const els = [...fig.querySelectorAll<SVGGElement>("[data-el]")];
+    const edges = els.filter((el) => el.classList.contains("d-edge"));
+    const tip = fig.querySelector<HTMLElement>(".d-tip")!;
+
+    // Subtle tilt toward the cursor, unless a Scrolly stage owns the transform.
+    if (!fig.closest("[data-scrolly]")) pointerTilt(fig, 3);
+
+    // Standalone plates draw themselves in once.
+    if (!fig.closest("[data-scrolly]") && !reducedMotion()) {
+      const lines = edges.map((e) => e.querySelector<SVGPathElement>(".d-edge-line")!);
+      lines.forEach((p) => {
+        const len = p.getTotalLength();
+        gsap.set(p, { strokeDasharray: len, strokeDashoffset: len });
+      });
+      const tl = gsap.timeline({ paused: true });
+      tl.from(fig.querySelectorAll(".d-group"), { opacity: 0, duration: 0.5, stagger: 0.08 })
+        .from(fig.querySelectorAll(".d-node"), { opacity: 0, y: 8, duration: 0.45, stagger: 0.06 }, "<0.2")
+        .to(lines, { strokeDashoffset: 0, duration: 0.6, stagger: 0.05, ease: "power1.inOut" }, "<0.3")
+        .add(() => lines.forEach((p) => p.removeAttribute("style")));
+      ScrollTrigger.create({ trigger: fig, start: "top 75%", once: true, onEnter: () => tl.play() });
+    }
+
+    // Driven by a Scrolly.
+    fig.addEventListener("plate:state", (ev) => {
+      const { hidden, focus } = (ev as CustomEvent<PlateState>).detail;
+      fig.classList.add("is-staged");
+      fig.classList.toggle("has-focus", focus.length > 0);
+      const hiddenSet = new Set(hidden);
+      const focusSet = new Set(focus);
+      for (const el of els) {
+        const id = el.dataset.el!;
+        let isShown = !hiddenSet.has(id);
+        let isFocus = focusSet.has(id);
+        if (el.classList.contains("d-edge")) {
+          const from = el.dataset.from!;
+          const to = el.dataset.to!;
+          isShown &&= !hiddenSet.has(from) && !hiddenSet.has(to);
+          isFocus ||= focusSet.has(from) && focusSet.has(to);
+        }
+        el.classList.toggle("is-shown", isShown);
+        el.classList.toggle("is-focus", isFocus && isShown);
+      }
+    });
+
+    // Tooltips: hover on desktop, tap/focus everywhere.
+    const show = (node: SVGGElement) => {
+      const note = node.dataset.note;
+      if (!note) return;
+      tip.innerHTML = "";
+      const strong = document.createElement("strong");
+      strong.textContent = node.dataset.label ?? "";
+      tip.append(strong, document.createTextNode(note));
+      tip.hidden = false;
+      const f = fig.getBoundingClientRect();
+      const r = node.getBoundingClientRect();
+      const left = Math.min(Math.max(r.left - f.left + r.width / 2 - 128, 8), f.width - 264);
+      const below = r.bottom - f.top + 8;
+      tip.style.left = `${Math.max(8, left)}px`;
+      tip.style.top = below + 90 > f.height ? `${r.top - f.top - tip.offsetHeight - 8}px` : `${below}px`;
+    };
+    const hide = () => (tip.hidden = true);
+    for (const node of fig.querySelectorAll<SVGGElement>(".d-node[data-note]")) {
+      node.addEventListener("pointerenter", () => show(node));
+      node.addEventListener("pointerleave", hide);
+      node.addEventListener("focus", () => show(node));
+      node.addEventListener("blur", hide);
+      node.addEventListener("click", () => (tip.hidden ? show(node) : hide()));
+    }
+  }
+</script>

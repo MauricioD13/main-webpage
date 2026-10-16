@@ -1,0 +1,141 @@
+---
+// Scrollytelling section: narrative steps on one side, a sticky stage of plates on the other.
+// Without JavaScript (or with reduced motion) it degrades to text beside a complete figure.
+interface Props {
+  /** Put the stage on the left instead of the right (desktop only). */
+  flip?: boolean;
+}
+const { flip = false } = Astro.props;
+---
+
+<section class:list={["scrolly", { flip }]} data-scrolly>
+  <div class="scrolly-steps">
+    <slot />
+  </div>
+  <div class="scrolly-stage">
+    <div class="stage-inner">
+      <slot name="stage" />
+    </div>
+  </div>
+</section>
+
+<style>
+  .scrolly {
+    display: grid;
+    gap: 1.5rem;
+    margin: 3rem 0;
+  }
+  .scrolly-stage {
+    order: -1;
+    position: sticky;
+    top: 3.75rem;
+    z-index: 1;
+    background: var(--paper);
+    padding-bottom: 0.75rem;
+  }
+  .stage-inner {
+    display: grid;
+    gap: 1.5rem;
+  }
+  /* With JS, multiple panels share one cell and cross-fade; without it they stack. */
+  :global(.scrolly.is-live) .stage-inner > :global([data-panel]) {
+    grid-area: 1 / 1;
+    transition:
+      opacity 0.5s ease,
+      visibility 0.5s;
+  }
+  :global(.scrolly.is-live) .stage-inner > :global([data-panel]:not(.is-active)) {
+    opacity: 0;
+    visibility: hidden;
+  }
+  @media (max-width: 1023px) {
+    .stage-inner :global(.plate-svg),
+    .stage-inner :global(.chart-svg) {
+      max-height: 40vh;
+    }
+  }
+  @media (min-width: 1024px) {
+    .scrolly {
+      grid-template-columns: minmax(0, 24rem) minmax(0, 1fr);
+      gap: 3.5rem;
+      align-items: start;
+    }
+    .scrolly.flip {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 24rem);
+    }
+    .scrolly.flip .scrolly-stage {
+      order: -1;
+    }
+    .scrolly-stage {
+      order: 0;
+      top: 4.5rem;
+      background: transparent;
+    }
+    /* With JS the stage is pinned and vertically centred while the steps scroll. */
+    :global(.scrolly.is-live) .scrolly-stage {
+      top: 0;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      padding: 4.5rem 0 2rem;
+    }
+    .stage-inner {
+      width: 100%;
+    }
+  }
+</style>
+
+<script>
+  import { ScrollTrigger, pointerTilt } from "../../scripts/motion";
+  import type { PlateState } from "./types";
+
+  const csv = (v?: string) => (v ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+
+  for (const scrolly of document.querySelectorAll<HTMLElement>("[data-scrolly]")) {
+    const panels = [...scrolly.querySelectorAll<HTMLElement>(".stage-inner > [data-panel]")];
+    const stepEls = [...scrolly.querySelectorAll<HTMLElement>("[data-step]")];
+    if (!panels.length || !stepEls.length) continue;
+
+    // Resolve which panel each step drives, inheriting from the step before.
+    let current = panels[0].dataset.panel!;
+    const steps = stepEls.map((el) => {
+      current = el.dataset.panelTarget ?? current;
+      return { el, panel: current, show: csv(el.dataset.show), focus: csv(el.dataset.focus) };
+    });
+
+    scrolly.classList.add("is-live");
+    panels.forEach((p) => pointerTilt(p, 2.5));
+
+    const activate = (i: number) => {
+      const step = steps[i];
+      steps.forEach((s, j) => s.el.classList.toggle("is-active", j === i));
+      for (const p of panels) {
+        const active = p.dataset.panel === step.panel;
+        const wasActive = p.classList.contains("is-active");
+        p.classList.toggle("is-active", active);
+        if (!active) continue;
+        if (!wasActive) p.dispatchEvent(new CustomEvent("plate:active"));
+        // Everything this panel's steps reveal later stays hidden for now.
+        const own = steps.map((s, j) => ({ ...s, j })).filter((s) => s.panel === step.panel);
+        const hidden = own.filter((s) => s.j > i).flatMap((s) => s.show);
+        const revealed = new Set(own.filter((s) => s.j <= i).flatMap((s) => s.show));
+        const detail: PlateState = {
+          hidden: hidden.filter((id) => !revealed.has(id)),
+          focus: step.focus,
+          step: i,
+        };
+        p.dispatchEvent(new CustomEvent<PlateState>("plate:state", { detail }));
+      }
+    };
+
+    steps.forEach((s, i) =>
+      ScrollTrigger.create({
+        trigger: s.el,
+        start: "top 65%",
+        end: "bottom 65%",
+        onToggle: (self) => self.isActive && activate(i),
+      }),
+    );
+    activate(0);
+  }
+</script>
