@@ -1,0 +1,24 @@
+---
+import type { Lang } from "../i18n/ui";
+import { localePath, useTranslations } from "../i18n/utils";
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+const year = new Date().getFullYear();
+---
+
+<footer class="ui mt-24 border-t border-rule">
+  <div class="mx-auto flex max-w-6xl flex-wrap items-baseline justify-between gap-4 px-4 py-10 text-sm text-ink-soft sm:px-6">
+    <p>
+      <span class="font-serif text-base text-ink">{t("site.author")}</span>, {year}. {t("footer.built")}
+    </p>
+    <ul class="flex flex-wrap gap-5">
+      <li><a href="https://www.linkedin.com/in/mauricio-cuello-/" rel="me">LinkedIn</a></li>
+      <li><a href="https://github.com/MauricioD13" rel="me">GitHub</a></li>
+      <li><a href={localePath(lang, "rss.xml").replace(/\/$/, "")}>{t("footer.rss")}</a></li>
+    </ul>
+  </div>
+</footer>

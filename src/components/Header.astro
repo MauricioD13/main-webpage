@@ -1,0 +1,192 @@
+---
+import { languages, langs, type Lang } from "../i18n/ui";
+import { localePath, useTranslations } from "../i18n/utils";
+import ThemeToggle from "./ThemeToggle.astro";
+
+interface Props {
+  lang: Lang;
+  alternates: Record<Lang, string>;
+  runningHead?: string;
+  section?: "chapters" | "stories" | "books";
+}
+const { lang, alternates, runningHead, section } = Astro.props;
+const t = useTranslations(lang);
+const nav = [
+  { key: "chapters", label: t("nav.chapters"), href: localePath(lang, "chapters") },
+  { key: "stories", label: t("nav.stories"), href: localePath(lang, "stories") },
+  { key: "books", label: t("nav.books"), href: localePath(lang, "books") },
+] as const;
+---
+
+<header class="site-header ui" data-header>
+  <div class="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4 sm:px-6">
+    <a href={localePath(lang)} class="brand shrink-0 no-underline">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-title">{t("site.title")}</span>
+    </a>
+    {runningHead && <span class="running-head" aria-hidden="true">{runningHead}</span>}
+    <nav aria-label="Main" class="ml-auto">
+      <ul class="flex items-center gap-1 sm:gap-2">
+        {
+          nav.map((item) => (
+            <li>
+              <a href={item.href} class="nav-link" aria-current={section === item.key ? "page" : undefined}>
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+    <div class="flex items-center gap-1 border-l border-rule pl-2 sm:pl-3">
+      <ul class="flex" aria-label={t("lang.label")}>
+        {
+          langs.map((l) => (
+            <li>
+              <a
+                href={alternates[l]}
+                hreflang={l}
+                lang={l}
+                class="lang-link"
+                aria-current={l === lang ? "true" : undefined}
+                title={languages[l]}
+              >
+                {l}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+      <ThemeToggle label={t("theme.toggle")} />
+    </div>
+  </div>
+  <div class="progress" aria-hidden="true"><span data-progress></span></div>
+</header>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: color-mix(in srgb, var(--paper) 92%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.9rem;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    color: var(--ink);
+    font-family: var(--font-serif);
+    font-size: 1.02rem;
+    font-weight: 500;
+  }
+  .brand-mark {
+    width: 0.9rem;
+    height: 1.15rem;
+    background: var(--plate);
+    border-radius: 1px 3px 3px 1px;
+    box-shadow: inset 2px 0 0 rgb(255 255 255 / 0.25);
+  }
+  .running-head {
+    display: none;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--ink-soft);
+    font-family: var(--font-serif);
+    font-style: italic;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  @media (min-width: 900px) {
+    .running-head {
+      display: block;
+    }
+  }
+  :global(.site-header.is-scrolled) .running-head {
+    opacity: 1;
+  }
+  .nav-link,
+  .lang-link {
+    display: inline-block;
+    padding: 0.35rem 0.5rem;
+    color: var(--ink-soft);
+    text-decoration: none;
+    border-radius: 3px;
+  }
+  .nav-link:hover,
+  .lang-link:hover {
+    color: var(--ink);
+  }
+  .nav-link[aria-current="page"] {
+    color: var(--ink);
+    box-shadow: inset 0 -2px 0 var(--signal);
+    border-radius: 0;
+  }
+  .lang-link {
+    padding: 0.35rem 0.35rem;
+    text-transform: uppercase;
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+  }
+  .lang-link[aria-current="true"] {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  @media (max-width: 520px) {
+    .brand-title {
+      display: none;
+    }
+    .nav-link {
+      padding: 0.35rem 0.35rem;
+    }
+  }
+  .progress {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 2px;
+    pointer-events: none;
+  }
+  .progress span {
+    display: block;
+    height: 100%;
+    width: 100%;
+    background: var(--signal);
+    transform: scaleX(0);
+    transform-origin: 0 50%;
+  }
+</style>
+
+<script>
+  import { ScrollTrigger } from "../scripts/motion";
+
+  for (const a of document.querySelectorAll<HTMLAnchorElement>("a[hreflang]"))
+    a.addEventListener("click", () => {
+      try {
+        localStorage.setItem("lang", a.hreflang);
+      } catch {}
+    });
+
+  const header = document.querySelector<HTMLElement>("[data-header]")!;
+  const bar = header.querySelector<HTMLElement>("[data-progress]")!;
+  // Reading progress only on pages that mark their article.
+  const article = document.querySelector<HTMLElement>("[data-reading]");
+  ScrollTrigger.create({
+    start: 120,
+    end: "max",
+    onToggle: (self) => header.classList.toggle("is-scrolled", self.isActive),
+  });
+  if (article) {
+    ScrollTrigger.create({
+      trigger: article,
+      start: "top top",
+      end: "bottom bottom",
+      onUpdate: (self) => (bar.style.transform = `scaleX(${self.progress})`),
+    });
+  }
+</script>
