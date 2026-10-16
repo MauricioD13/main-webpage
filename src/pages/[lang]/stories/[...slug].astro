@@ -1,0 +1,41 @@
+---
+import { render } from "astro:content";
+import Base from "../../../layouts/Base.astro";
+import Cyanotype from "../../../components/Cyanotype.astro";
+import FallbackNotice from "../../../components/FallbackNotice.astro";
+import { langs, type Lang } from "../../../i18n/ui";
+import { entrySlug, formatDate, getAlternates, getLocalizedEntries, localePath, readingMinutes, useTranslations } from "../../../i18n/utils";
+
+export async function getStaticPaths() {
+  const paths = [];
+  for (const lang of langs)
+    for (const { entry, fallback } of await getLocalizedEntries("stories", lang))
+      paths.push({ params: { lang, slug: entrySlug(entry.id) }, props: { entry, fallback } });
+  return paths;
+}
+
+const { entry, fallback } = Astro.props;
+const lang = Astro.params.lang as Lang;
+const t = useTranslations(lang);
+const { Content } = await render(entry);
+const d = entry.data;
+const alternates = await getAlternates("stories", "stories", d.translationKey);
+---
+
+<Base lang={lang} canonicalPath={fallback ? alternates.en : undefined} title={d.title} description={d.description} alternates={alternates} runningHead={d.title} ogType="article" section="stories">
+  <article data-reading class="mx-auto max-w-3xl px-4 pt-12 sm:px-6 lg:pt-20" lang={fallback ? "en" : lang}>
+    <a href={localePath(lang, "stories")} class="ui text-sm text-ink-soft no-underline hover:text-ink">{t("post.back")}: {t("stories.title")}</a>
+    <h1 class="display mt-6 text-[clamp(2.2rem,5vw,3.6rem)] text-balance">{d.title}</h1>
+    <p class="mt-4 text-xl leading-snug text-ink-soft italic">{d.description}</p>
+    <p class="ui mt-6 flex flex-wrap gap-x-5 gap-y-1 text-sm text-ink-soft">
+      <time datetime={d.date.toISOString()}>{formatDate(d.date, lang, { day: "numeric" })}</time>
+      <span>{readingMinutes(entry.body)} {t("stories.read")}</span>
+      {d.tags.length > 0 && <span>{d.tags.join(", ")}</span>}
+    </p>
+    {fallback && <FallbackNotice lang={lang} />}
+    {d.cover && <Cyanotype src={d.cover} alt="" class="mt-10 aspect-[16/9] rounded-[4px]" loading="eager" sizes="(min-width: 768px) 720px, 100vw" />}
+    <div class="prose-book mt-10">
+      <Content />
+    </div>
+  </article>
+</Base>

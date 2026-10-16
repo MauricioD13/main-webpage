@@ -1,0 +1,23 @@
+---
+import Base from "../../../layouts/Base.astro";
+import StoryList from "../../../components/StoryList.astro";
+import type { Lang } from "../../../i18n/ui";
+import { getLocalizedEntries, localePath, useTranslations } from "../../../i18n/utils";
+import { localeStaticPaths } from "../../../lib/paths";
+
+export const getStaticPaths = localeStaticPaths;
+
+const lang = Astro.params.lang as Lang;
+const t = useTranslations(lang);
+const items = (await getLocalizedEntries("stories", lang)).sort((a, b) => b.entry.data.date.valueOf() - a.entry.data.date.valueOf());
+---
+
+<Base lang={lang} title={t("stories.title")} description={t("stories.lede")} alternates={{ en: localePath("en", "stories"), es: localePath("es", "stories") }} section="stories">
+  <div class="mx-auto max-w-4xl px-4 pt-14 sm:px-6 lg:pt-20">
+    <h1 class="display text-[clamp(2.6rem,6vw,4.4rem)]">{t("stories.title")}</h1>
+    <p class="measure mt-5 text-lg leading-relaxed text-ink-soft">{t("stories.lede")}</p>
+    <div class="mt-12">
+      <StoryList lang={lang} items={items} />
+    </div>
+  </div>
+</Base>
