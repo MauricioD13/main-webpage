@@ -1,0 +1,269 @@
+---
+// The home page opener: a blueprint-bound book. On wide screens scrolling opens the
+// cover onto a spread (inside cover + contents). Elsewhere, and without JS or with
+// reduced motion, cover and contents simply sit side by side / stacked.
+import type { CollectionEntry } from "astro:content";
+import ContentsList from "./ContentsList.astro";
+import type { Lang } from "../i18n/ui";
+import { localePath, useTranslations } from "../i18n/utils";
+
+interface Props {
+  lang: Lang;
+  chapters: { entry: CollectionEntry<"chapters">; fallback: boolean }[];
+}
+const { lang, chapters } = Astro.props;
+const t = useTranslations(lang);
+---
+
+<section class="hero" data-hero aria-labelledby="book-title">
+  <div class="hero-pin">
+    <div class="book" data-book>
+      <div class="leaf cover" data-cover>
+        <div class="face front blueprint">
+          <svg class="cover-art" viewBox="0 0 300 220" aria-hidden="true">
+            <!-- Nested boundaries like an architecture plate: account, network, subnet. -->
+            <rect x="6" y="6" width="288" height="208" rx="6" fill="none" stroke="currentColor" stroke-opacity="0.75" />
+            <rect x="26" y="34" width="248" height="164" rx="5" fill="none" stroke="currentColor" stroke-opacity="0.5" stroke-dasharray="6 5" />
+            <rect x="46" y="62" width="208" height="58" rx="4" fill="rgb(217 230 240 / 0.06)" stroke="currentColor" stroke-opacity="0.4" />
+            <rect x="46" y="132" width="208" height="54" rx="4" fill="rgb(217 230 240 / 0.06)" stroke="currentColor" stroke-opacity="0.4" />
+            <path d="M150 20v42M100 91h100M100 91v68M200 91v68M100 159h100" fill="none" stroke="currentColor" stroke-opacity="0.8" />
+            <path class="cover-flow" d="M150 20v42M150 91v68" fill="none" />
+            <rect x="138" y="8" width="24" height="24" rx="3" fill="var(--plate)" stroke="currentColor" />
+            <rect x="88" y="79" width="24" height="24" rx="3" fill="var(--plate)" stroke="currentColor" />
+            <rect x="188" y="79" width="24" height="24" rx="3" fill="var(--plate)" stroke="currentColor" />
+            <rect x="138" y="79" width="24" height="24" rx="3" fill="var(--plate)" stroke="var(--signal)" stroke-width="1.6" />
+            <circle cx="150" cy="159" r="12" fill="var(--plate)" stroke="currentColor" />
+          </svg>
+          <h1 id="book-title" class="cover-title display">{t("site.title")}</h1>
+          <p class="cover-author ui">{t("site.author")}</p>
+        </div>
+        <div class="face back" aria-hidden="true">
+          <p class="inside-lede">{t("home.lede")}</p>
+          <p class="inside-sign ui">{t("site.author")}</p>
+        </div>
+      </div>
+      <div class="leaf page">
+        <h2 class="ui page-head">{t("home.contents")}</h2>
+        <ContentsList lang={lang} items={chapters} />
+        <p class="page-more ui">
+          <a href={localePath(lang, "stories")}>{t("nav.stories")}</a>
+          <a href={localePath(lang, "books")}>{t("nav.books")}</a>
+        </p>
+      </div>
+    </div>
+    <p class="open-hint ui" data-hint aria-hidden="true">{t("home.open")}</p>
+  </div>
+</section>
+
+<style>
+  .hero {
+    --W: min(26rem, 88vw);
+    padding: 2.5rem 1rem 1rem;
+  }
+  .book {
+    display: grid;
+    gap: 2rem;
+    justify-content: center;
+    grid-template-columns: var(--W);
+  }
+  .leaf {
+    width: var(--W);
+  }
+  .face {
+    border-radius: 3px 8px 8px 3px;
+  }
+  .front {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    aspect-ratio: 3 / 4;
+    padding: 2rem 1.8rem 1.6rem 2.2rem;
+    box-shadow:
+      inset 10px 0 0 rgb(0 0 0 / 0.16),
+      inset 11px 0 0 rgb(255 255 255 / 0.12),
+      0 30px 60px -30px rgb(10 25 50 / 0.65);
+  }
+  .cover-art {
+    width: 100%;
+    color: var(--plate-line);
+  }
+  .cover-flow {
+    stroke: var(--signal);
+    stroke-width: 2;
+    stroke-dasharray: 3 9;
+    animation: cover-flow 1.6s linear infinite;
+  }
+  @keyframes cover-flow {
+    to {
+      stroke-dashoffset: -24;
+    }
+  }
+  .cover-title {
+    margin-top: auto;
+    font-size: clamp(2.6rem, 9vw, 3.6rem);
+    font-weight: 250;
+    line-height: 0.98;
+    color: #f2f4f3;
+  }
+  .cover-author {
+    margin-top: 1rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid rgb(217 230 240 / 0.35);
+    font-size: 0.85rem;
+    color: var(--plate-line);
+  }
+  .back {
+    display: none;
+  }
+  .page-head {
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+    margin-bottom: 1rem;
+  }
+  .page-more {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 1.25rem;
+    font-size: 0.9rem;
+  }
+  .page-more a {
+    color: var(--ink);
+  }
+  @media (min-width: 900px) {
+    .book {
+      grid-template-columns: var(--W) var(--W);
+      gap: 3rem;
+      align-items: start;
+    }
+  }
+
+  /* 3D mode, switched on by the script on wide screens with motion allowed. */
+  :global(.hero.is-3d) {
+    --W: min(27rem, 40vw, 64vh);
+    height: 240vh;
+    padding: 0;
+  }
+  :global(.hero.is-3d) .hero-pin {
+    position: sticky;
+    top: 3.5rem;
+    height: calc(100vh - 3.5rem);
+    display: grid;
+    place-items: center;
+    perspective: 2200px;
+  }
+  :global(.hero.is-3d) .book {
+    position: relative;
+    display: block;
+    width: calc(var(--W) * 2);
+    height: calc(var(--W) * 4 / 3);
+    transform-style: preserve-3d;
+  }
+  :global(.hero.is-3d) .leaf {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    height: 100%;
+  }
+  :global(.hero.is-3d) .page {
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 2px 6px 6px 2px;
+    padding: 2rem 1.8rem;
+    overflow: hidden;
+    box-shadow: 0 30px 60px -36px rgb(10 25 50 / 0.5);
+  }
+  :global(.hero.is-3d) .page :global(.toc-title) {
+    font-size: 1.02rem;
+  }
+  :global(.hero.is-3d) .page :global(.toc-link) {
+    padding: 0.6rem 0;
+  }
+  :global(.hero.is-3d) .cover {
+    z-index: 2;
+    transform-origin: 0% 50%;
+    transform-style: preserve-3d;
+  }
+  :global(.hero.is-3d) .face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+  }
+  :global(.hero.is-3d) .front {
+    aspect-ratio: auto;
+  }
+  :global(.hero.is-3d) .back {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 2.5rem 2.2rem;
+    background: var(--paper-raised);
+    border: 1px solid var(--rule);
+    border-radius: 8px 3px 3px 8px;
+    transform: rotateY(180deg);
+  }
+  .open-hint {
+    display: none;
+  }
+  :global(.hero.is-3d) .open-hint {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    position: absolute;
+    bottom: 1.5rem;
+    left: 50%;
+    translate: -50% 0;
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+  }
+  :global(.hero.is-3d) .open-hint::after {
+    content: "";
+    width: 1px;
+    height: 1.6rem;
+    background: linear-gradient(var(--ink-soft), transparent);
+    animation: hint 1.8s ease-in-out infinite;
+  }
+  @keyframes hint {
+    50% {
+      transform: translateY(5px);
+    }
+  }
+  .inside-lede {
+    font-size: 1.3rem;
+    line-height: 1.5;
+    font-style: italic;
+    text-wrap: pretty;
+  }
+  .inside-sign {
+    margin-top: 1.5rem;
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+  }
+</style>
+
+<script>
+  import { gsap, reducedMotion, pointerTilt, finePointer } from "../scripts/motion";
+
+  const hero = document.querySelector<HTMLElement>("[data-hero]");
+  if (hero) {
+    const mm = gsap.matchMedia();
+    mm.add("(min-width: 900px) and (min-height: 620px) and (prefers-reduced-motion: no-preference)", () => {
+      hero.classList.add("is-3d");
+      const book = hero.querySelector<HTMLElement>("[data-book]")!;
+      const cover = hero.querySelector<HTMLElement>("[data-cover]")!;
+      const W = cover.offsetWidth;
+      // Closed: the cover sits centred. Open: the spread is centred.
+      const tl = gsap.timeline({
+        scrollTrigger: { trigger: hero, start: "top top", end: "bottom bottom", scrub: 0.6 },
+      });
+      tl.fromTo(book, { x: -W / 2, rotationX: 8 }, { x: 0, rotationX: 0, ease: "none", duration: 1 }, 0)
+        .fromTo(cover, { rotationY: 0 }, { rotationY: -178, ease: "power1.inOut", duration: 0.85 }, 0.05)
+        .to(hero.querySelector("[data-hint]"), { opacity: 0, duration: 0.15 }, 0);
+      const stopTilt = finePointer() && !reducedMotion() ? pointerTilt(hero.querySelector(".hero-pin")!, 3) : () => {};
+      return () => {
+        stopTilt();
+        hero.classList.remove("is-3d");
+        gsap.set([book, cover], { clearProps: "all" });
+      };
+    });
+  }
+</script>

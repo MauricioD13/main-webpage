@@ -1,0 +1,76 @@
+---
+import Base from "../../layouts/Base.astro";
+import BookHero from "../../components/BookHero.astro";
+import StoryList from "../../components/StoryList.astro";
+import BookCover from "../../components/BookCover.astro";
+import type { Lang } from "../../i18n/ui";
+import { entrySlug, getLocalizedEntries, localePath, useTranslations } from "../../i18n/utils";
+import { localeStaticPaths } from "../../lib/paths";
+
+export const getStaticPaths = localeStaticPaths;
+
+const lang = Astro.params.lang as Lang;
+const t = useTranslations(lang);
+const chapters = (await getLocalizedEntries("chapters", lang)).sort((a, b) => a.entry.data.chapter - b.entry.data.chapter);
+const stories = (await getLocalizedEntries("stories", lang)).sort((a, b) => b.entry.data.date.valueOf() - a.entry.data.date.valueOf()).slice(0, 3);
+const reading = (await getLocalizedEntries("books", lang)).filter(({ entry }) => entry.data.status === "reading");
+---
+
+<Base lang={lang} alternates={{ en: "/en/", es: "/es/" }}>
+  <BookHero lang={lang} chapters={chapters} />
+  <p class="home-lede mx-auto mt-6 max-w-[26rem] px-4 text-lg leading-relaxed text-ink-soft italic sm:max-w-xl">{t("home.lede")}</p>
+
+  <div class="mx-auto mt-24 grid max-w-6xl gap-16 px-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+    <section aria-labelledby="latest-stories">
+      <div class="flex items-baseline justify-between gap-4">
+        <h2 id="latest-stories" class="display text-3xl">{t("home.latestStories")}</h2>
+        <a href={localePath(lang, "stories")} class="ui text-sm">{t("home.allStories")}</a>
+      </div>
+      <div class="mt-6">
+        <StoryList lang={lang} items={stories} />
+      </div>
+    </section>
+
+    {
+      reading.length > 0 && (
+        <section aria-labelledby="nightstand">
+          <h2 id="nightstand" class="display text-3xl">{t("home.reading")}</h2>
+          <ul class="mt-6 space-y-6">
+            {reading.map(({ entry }) => (
+              <li>
+                <a href={localePath(lang, `books/${entrySlug(entry.id)}`)} class="nightstand-book">
+                  <BookCover book={entry.data.book} color={entry.data.spine} class="w-28 shrink-0" />
+                  <span>
+                    <span class="block text-lg leading-snug">{entry.data.book.title}</span>
+                    <span class="ui mt-1 block text-sm text-ink-soft">{entry.data.book.author}</span>
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+          <a href={localePath(lang, "books")} class="ui mt-6 inline-block text-sm">
+            {t("home.shelf")}
+          </a>
+        </section>
+      )
+    }
+  </div>
+</Base>
+
+<style>
+  :global(.hero.is-3d) ~ .home-lede {
+    display: none;
+  }
+  .nightstand-book {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .nightstand-book:hover .text-lg {
+    text-decoration: underline;
+    text-decoration-color: var(--signal);
+    text-underline-offset: 0.2em;
+  }
+</style>

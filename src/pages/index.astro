@@ -1,0 +1,23 @@
+---
+// "/" picks the reader's language. Static hosting has no Accept-Language routing,
+// so this runs in the browser, with a plain link for no-JS readers.
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tech Histories</title>
+    <link rel="canonical" href={new URL("/en/", Astro.site)} />
+    <meta name="robots" content="noindex" />
+    <script is:inline>
+      const saved = (() => { try { return localStorage.getItem("lang"); } catch { return null; } })();
+      const pref = saved || (navigator.languages || [navigator.language]).find((l) => /^(en|es)/i.test(l)) || "en";
+      location.replace("/" + pref.slice(0, 2).toLowerCase() + "/");
+    </script>
+  </head>
+  <body style="font-family: Georgia, serif; padding: 2rem; background: #f2f4f3; color: #18202b;">
+    <p><a href="/en/">English</a> / <a href="/es/">Español</a></p>
+  </body>
+</html>
