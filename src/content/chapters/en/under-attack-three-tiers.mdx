@@ -1,0 +1,100 @@
+---
+title: "Under attack, then three tiers"
+subtitle: "A port scan took down a monolith, and the rebuild became my first Terraform project"
+summary: "Scanner traffic from a single origin kept crashing a Laravel server. After stopping the bleeding, I rebuilt it as stateless instances behind a load balancer, with RDS, S3 and Terraform."
+chapter: 2
+date: 2024-08-30
+period: "2024"
+role: "Cloud administration and infrastructure as code, freelance"
+stack: ["EC2", "Auto Scaling", "Application Load Balancer", "RDS MySQL", "S3", "CloudWatch", "SNS", "Terraform", "Checkov"]
+cover: ../../../assets/chapters/under-attack-three-tiers/aws-three-tier-arch.jpg
+outcomes:
+  - value: "2+"
+    label: "instances behind the load balancer, never one"
+  - value: "50%"
+    label: "minimum healthy during rolling refresh"
+  - value: "30 days"
+    label: "of automated database backups"
+translationKey: under-attack-three-tiers
+---
+
+import Scrolly from "@/components/visual/Scrolly.astro";
+import Step from "@/components/visual/Step.astro";
+import ArchDiagram from "@/components/visual/ArchDiagram.astro";
+import Callout from "@/components/visual/Callout.astro";
+import { singleServer, threeTier } from "@/data/diagrams";
+
+A sudden server crash is every developer's nightmare, and that's where this one starts. One afternoon the server went down without warning. It ran Nginx as a reverse proxy in front of a PHP Laravel backend, a setup that had been stable until then.
+
+<Scrolly>
+  <ArchDiagram slot="stage" panel="before" diagram={singleServer} title="Before: one server, one target" plate="Plate 2.1" />
+  <ArchDiagram slot="stage" panel="after" diagram={threeTier} title="After: three tiers" plate="Plate 2.2" caption="Tap or hover a component for details." />
+
+  <Step panel="before" focus="scanner,ec2">
+    The Nginx logs had the answer: the server was under attack. Traffic from one origin was port scanning and brute-force fuzzing subdomains. The volume alone overloaded the instance and crashed it, again and again.
+  </Step>
+
+  <Step focus="scanner,ec2,users">
+    First, stop the bleeding. I changed the security groups to block the malicious addresses and closed an open port above 6000 after checking which service used it. The server stabilized, but this was a patch, not a fix.
+  </Step>
+
+  <Step focus="ec2,cw,sns" show="cw,sns">
+    So the next time something like this happened, we'd hear about it before the users did: a **CloudWatch alarm** on the instance's CPU, wired to **SNS** so the team got the alert immediately.
+  </Step>
+
+  <Step panel="after" focus="alb,app1,app2" show="aws,vpc,public,app,asg,alb,app1,app2">
+    The attack showed how fragile a single monolithic instance was. The app also served a mobile client over websockets. Rather than a big refactor, I decoupled only what was needed to make the server **stateless**, so instances could come and go behind a **load balancer**.
+  </Step>
+
+  <Step focus="rds,s3,app2" show="data,rds,s3,users">
+    Making it stateless meant moving state out. The MySQL database went to **Amazon RDS**. User images and other static files went to **S3**. Now any instance could serve any request.
+  </Step>
+
+  <Step focus="ami,app2" show="ami">
+    The **Auto Scaling group** launches instances from a template that points at an **AMI**. I built that AMI from an instance connected to RDS, with the MySQL procedures set up and the data dumped in. New releases follow the same path: new AMI, new launch template version, instance refresh.
+  </Step>
+
+  <Step focus="rds,cw" show="cw">
+    The database got encryption with KMS, storage autoscaling, CloudWatch logs, enhanced monitoring, 30-day automated backups and a maintenance window in the quiet hours.
+  </Step>
+</Scrolly>
+
+## Terraform, on purpose
+
+A two-tier upgrade would have been the straightforward option. I saw the incident as a chance to learn **infrastructure as code** properly, even on a freelance project. Being able to deploy and destroy the whole environment on demand keeps it clean and reviewable.
+
+The state lives in an **S3 backend**, so it's stored remotely and consistently for anyone working on it. I validated the setup by deploying the foundations first: VPC, subnets and security groups.
+
+I also added **Checkov** to scan the plan for security and compliance misconfigurations before anything reached AWS:
+
+```bash
+python3 -m venv .env
+source .env/bin/activate
+pip3 install checkov
+```
+
+```bash
+#!/bin/bash
+terraform plan -out tf.plan
+terraform show -json tf.plan | jq > tf.json
+checkov -f tf.json
+```
+
+<Callout>
+  The team didn't have DevOps practices yet. Checkov was a proof of concept, a small way to show what the process could look like later.
+</Callout>
+
+## Shipping a new version
+
+1. The development team builds a new AMI from the staging server once the features are in.
+2. The new AMI goes into the launch template, which creates a new template version.
+3. An instance refresh, from the console or the CLI, replaces instances on a **rolling** strategy with at least 50% healthy at all times.
+
+No downtime, and capacity still tracks demand through target-tracking on average CPU.
+
+## What I'd do next
+
+- **Security:** AWS WAF in front of the load balancer, AWS Shield for DDoS, MFA on every account.
+- **Automation:** a CI/CD pipeline for deployments, and Terraform covering every component.
+- **Observability:** centralized logs and request tracing with AWS X-Ray.
+- **Cost:** reserved capacity for the baseline and regular right-sizing reviews.

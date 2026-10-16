@@ -1,0 +1,71 @@
+---
+title: "Reports nobody had to ask for"
+subtitle: "A serverless pipeline from Odoo to self-service dashboards"
+summary: "Odoo held the data but couldn't analyze it. A Python script on Lambda grew into a Terraform-templated pipeline: S3 by date, Athena for SQL, Metabase for everyone else."
+chapter: 4
+date: 2025-06-05
+period: "2025"
+role: "Data engineering"
+stack: ["Python", "Lambda", "EventBridge Scheduler", "SNS", "Parameter Store", "S3", "Athena", "ECS", "RDS", "Metabase", "Terraform", "GitHub Actions"]
+cover: ../../../assets/chapters/odoo-data-pipeline/serverless_data_pipeline.png
+outcomes:
+  - value: "1"
+    label: "Terraform module behind every report"
+  - value: "Self-service"
+    label: "dashboards instead of report emails"
+translationKey: odoo-data-pipeline
+---
+
+import Scrolly from "@/components/visual/Scrolly.astro";
+import Step from "@/components/visual/Step.astro";
+import ArchDiagram from "@/components/visual/ArchDiagram.astro";
+import Callout from "@/components/visual/Callout.astro";
+import { dataPipeline } from "@/data/diagrams";
+
+Odoo is a strong ERP with features for running most of a business, but analyzing data isn't one of them, especially once tables get large. You could say that's unfair: there are community modules that add reporting. In practice, installing them is too much for non-technical staff, and someone has to maintain them. That's a heavy burden when the tech team is small and already stretched, which is exactly where I was.
+
+Odoo does have a capable JSON API for pulling raw data. I started writing Python scripts against it to turn billing and sales data into simple reports. After a few trials it was clear these could bring real value, so I focused first on something useful for the sales team.
+
+<Scrolly>
+  <ArchDiagram slot="stage" diagram={dataPipeline} title="Odoo to dashboards" plate="Plate 4.1" caption="Tap or hover a component for details." />
+
+  <Step focus="odoo,lambda,ssm" show="odoo,lambda,ssm">
+    **Basic reporting.** I needed somewhere to run short scripts on a schedule with as little upkeep as possible. A **Lambda** function was the natural fit, with the Odoo API key kept in **Parameter Store**.
+  </Step>
+
+  <Step focus="schedule,lambda,sns" show="schedule,sns,team">
+    **Expanding it.** If the first report proved useful, the approach had to scale. I wrote a **Terraform module** that wires up a Lambda function, an **SNS** topic and an **EventBridge Scheduler** rule: a repeatable template, not a one-off script. Then I stamped it out for every Odoo table worth reporting on, such as pending quotations and sales analysis.
+  </Step>
+
+  <Step focus="sns,team">
+    Two things became clear after a few of these, refined with the sales team's feedback. There's a limit to how many report emails people read before they start ignoring them. And what the business really needed was a place to *explore* the data, not just receive it.
+  </Step>
+
+  <Step focus="lambda,s3,athena" show="s3,athena">
+    **The platform.** The Lambdas now parse the extracted data, trim the fields nobody uses, and write it to **S3**, partitioned by date. **Athena** runs SQL directly over those files, with no servers to manage.
+  </Step>
+
+  <Step focus="athena,metabase,rds,team" show="metabase,rds">
+    For the people side I chose **Metabase**: easy to read, self-service dashboards, flexible queries, and a free self-hosted version. It runs as a container on the **ECS** cluster from Chapter III, with **RDS** for its own metadata, and it queries S3 through Athena.
+  </Step>
+
+  <Step focus="ci,lambda" show="ci">
+    **Automating deployment.** Zipping and uploading code by hand didn't survive the number of functions. Each Lambda got its own **GitHub Actions** pipeline that runs only when its directory changes, so updating the sales report never redeploys the quotations one.
+  </Step>
+</Scrolly>
+
+## The pipeline, in order
+
+1. A Lambda function extracts data from Odoo.
+2. The data is parsed and trimmed of unneeded fields.
+3. It's uploaded to S3, partitioned by date.
+4. Metabase queries the S3 data through Athena.
+5. Metabase's BI layer turns raw rows into something people can explore.
+
+## What it changed
+
+The business can now cross-reference its data freely, running complex SQL over the full dataset, and the self-service platform means that power isn't bottlenecked on me.
+
+<Callout>
+  It's a pattern I see a lot: the "good enough" reporting that ships with a system stops being good enough as soon as people actually start using their data.
+</Callout>

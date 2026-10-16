@@ -1,0 +1,108 @@
+---
+title: "The backup that filled the disk"
+subtitle: "An e-commerce server that crashed every Monday, and the bill that came with it"
+summary: "A Magento shop on an oversized EC2 instance kept going down. The cause was a cron job, a typo, and a backup bucket in someone else's AWS account."
+chapter: 1
+date: 2024-08-30
+period: "2024"
+role: "Cloud administration, freelance"
+stack: ["EC2", "S3", "IAM", "Compute Optimizer", "Ubuntu", "Apache", "Magento 2"]
+cover: ../../../assets/chapters/backup-that-filled-the-disk/aws-synthwave.jpg
+outcomes:
+  - value: "64%"
+    label: "lower AWS bill"
+  - value: "r6i.large"
+    label: "down from a c6i.2xlarge"
+translationKey: backup-that-filled-the-disk
+---
+
+import Scrolly from "@/components/visual/Scrolly.astro";
+import Step from "@/components/visual/Step.astro";
+import ArchDiagram from "@/components/visual/ArchDiagram.astro";
+import Chart from "@/components/visual/Chart.astro";
+import StatCounter from "@/components/visual/StatCounter.astro";
+import StatRow from "@/components/visual/StatRow.astro";
+import Callout from "@/components/visual/Callout.astro";
+import { backupDisk } from "@/data/diagrams";
+
+I started writing these histories because I couldn't believe how many poor-quality software providers are out there. Some take advantage of owners who don't have the technical background to judge what they're being sold, and charge more for it.
+
+By coincidence, I started working with an e-commerce shop hosted on AWS. Their previous provider had set up Magento 2 and then, after a commercial falling-out, stopped supporting it. A mutual friend put us in touch. The shop had three problems: the **bill**, the **backups**, and a **server that kept crashing**.
+
+<Scrolly>
+  <ArchDiagram slot="stage" diagram={backupDisk} title="The shop, as I found it" plate="Plate 1.1" caption="Tap or hover a component for details." />
+
+  <Step focus="users,ec2">
+    The whole shop ran on one EC2 instance: Ubuntu, Apache, Magento. The instance type was a **c6i.2xlarge**, a monster for this workload. Even on the busiest days, Christmas included, CPU peaked at about 20%. The owners had been told the development wouldn't work on anything smaller.
+  </Step>
+
+  <Step focus="ec2,disk" show="disk">
+    The site was down when I arrived. I opened SSH in the security group, restarted the server and did the Linux 101 round: `htop`, `df -h`, `systemctl status`, `journalctl -xe`. Magento's logs complained about failed writes, which pointed at the server rather than the CMS. And the disk was nearly full.
+  </Step>
+
+  <Step focus="cron,ec2,disk" show="cron">
+    The disk filled up on a schedule, so I went looking for a scheduled task. The crontab had daily, weekly and monthly backups of the database and the site. Two jobs mattered: the **cleanup**, which never cleaned anything because of a typo, and the **S3 sync**.
+  </Step>
+
+  <Step focus="ec2,oldS3" show="provider,oldS3">
+    The sync command pointed at a bucket the shop didn't own. Their backups were going to the old provider's AWS account.
+  </Step>
+
+  <Step focus="ec2,s3,iam" show="s3,iam">
+    I created a bucket in the shop's own account, pointed the sync at it, and moved the schedule to weekly on Sundays and monthly on the first of the month. An **IAM role** attached to the instance allows it to put objects in that bucket, and nothing else.
+  </Step>
+
+  <Step focus="optimizer,ec2" show="optimizer">
+    Then the bill. **Compute Optimizer** recommended an r6i.large. Magento's docs prefer compute-optimized instances, but the shop had custom code syncing Magento with their stock software, so I kept the memory: 16 GB. With backups taken and an Elastic IP keeping DNS stable, I stopped the instance, changed the type, and started it again.
+  </Step>
+</Scrolly>
+
+## What the disk said
+
+The fix was easy once the pattern was visible. These are the two `df -h` readings I took, one on Sunday and one on Monday morning.
+
+<Chart
+  type="bar"
+  title="Root volume used, 78 GB disk"
+  plate="Plate 1.2"
+  unit="%"
+  yMax={100}
+  data={[
+    { label: "Sunday", value: 94 },
+    { label: "Monday", value: 100 },
+  ]}
+  seriesLabel="Disk used"
+  caption="From df -h on /dev/root: 73 GB used on Sunday, 78 GB on Monday, when the weekly backup ran out of space."
+/>
+
+The crontab itself, with the cleanup and sync jobs that mattered:
+
+![Crontab with the backup, cleanup and S3 sync jobs](../../../assets/chapters/backup-that-filled-the-disk/cron-jobs.png)
+
+<StatRow>
+  <StatCounter value={20} suffix="%" label="peak CPU on the c6i.2xlarge" />
+  <StatCounter value={16} suffix=" GB" label="memory kept after right-sizing" />
+  <StatCounter value={64} suffix="%" label="lower AWS bill" />
+</StatRow>
+
+<Chart
+  type="bar"
+  title="AWS bill, before and after"
+  plate="Plate 1.3"
+  yMax={100}
+  data={[
+    { label: "Before", value: 100 },
+    { label: "After", value: 36 },
+  ]}
+  seriesLabel="Monthly cost, indexed to 100"
+  caption="Indexed, not in dollars: the bill dropped 64% after the backup fix and right-sizing."
+/>
+
+## What I'd tell the owner of any shop in the cloud
+
+- AWS is pay-per-use, and configuring it well is the customer's job. The right settings for *your* business are worth real money: here, 64% of the bill.
+- If something in your AWS account looks suspicious, get a second opinion. There are a lot of unreliable cloud consultants. A starting point is checking whether a provider who claims to be an AWS partner is listed at [partners.amazonaws.com](https://partners.amazonaws.com/).
+
+<Callout>
+  Not every good provider is an AWS partner; it has its own costs and hoops. But if they *say* they are, checking takes a minute.
+</Callout>

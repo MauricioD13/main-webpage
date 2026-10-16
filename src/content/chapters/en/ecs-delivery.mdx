@@ -1,0 +1,45 @@
+---
+title: "From manual deploys to a pipeline"
+subtitle: "Putting an application on ECS, and the path from merge to running service on rails"
+summary: "Releases were manual and got riskier as the team grew. I containerized the app, moved it to Amazon ECS and automated the path from commit to production."
+chapter: 3
+date: 2025-03-22
+period: "2025"
+role: "Containers and CI/CD"
+stack: ["Docker", "Amazon ECS", "Amazon ECR", "Application Load Balancer", "CloudWatch", "CI/CD"]
+outcomes:
+  - value: "Automated"
+    label: "from merge to deploy"
+  - value: "Rolling"
+    label: "deployments, no downtime"
+translationKey: ecs-delivery
+---
+
+import Scrolly from "@/components/visual/Scrolly.astro";
+import Step from "@/components/visual/Step.astro";
+import ArchDiagram from "@/components/visual/ArchDiagram.astro";
+import { ecsDelivery } from "@/data/diagrams";
+
+The application was being deployed by hand, with no consistent process. Every release was slow and a little different from the last, and that got worse as the team grew. The goal: a containerized deployment target on ECS, and a pipeline that takes a commit all the way to a running service.
+
+<Scrolly>
+  <ArchDiagram slot="stage" diagram={ecsDelivery} title="Merge to running service" plate="Plate 3.1" caption="Tap or hover a component for details." />
+
+  <Step focus="users,alb,ecs" show="ecs,alb,users,cw">
+    First the target. I containerized the application and defined its **ECS** task and service configuration, behind a load balancer, with logs going to CloudWatch.
+  </Step>
+
+  <Step focus="dev,ci" show="dev,ci">
+    Then the trigger. A merge to the main branch starts the **pipeline**: build the image, run the tests. If the tests fail, nothing ships.
+  </Step>
+
+  <Step focus="ci,ecr,ecs" show="ecr">
+    A green build pushes the image to the **registry** and deploys it to ECS with a **rolling** update: new tasks have to pass health checks before the old ones stop, so users never see a gap.
+  </Step>
+
+  <Step focus="dev,ci,ecr,ecs,alb,users">
+    The last piece wasn't technical: I documented the process so the team could run and change it without me.
+  </Step>
+</Scrolly>
+
+The same cluster became home for more than this app. Later, it ran the Metabase instance from [Chapter IV](../odoo-data-pipeline/).

@@ -1,0 +1,41 @@
+---
+title: "Closing the front door"
+subtitle: "Edge protection and least-privilege network rules, added without downtime"
+summary: "Public workloads had permissive security groups and nothing in front of them at the application layer. I added AWS WAF and tightened the network rules in place."
+chapter: 5
+date: 2025-09-18
+period: "2025"
+role: "Cloud security assessment and hardening"
+stack: ["AWS WAF", "Security Groups", "Application Load Balancer", "VPC"]
+outcomes:
+  - value: "0"
+    label: "downtime during the change"
+translationKey: edge-security
+---
+
+import Scrolly from "@/components/visual/Scrolly.astro";
+import Step from "@/components/visual/Step.astro";
+import ArchDiagram from "@/components/visual/ArchDiagram.astro";
+import { edgeSecurity } from "@/data/diagrams";
+
+The client's public-facing workloads were reachable through overly permissive network rules, with no application-layer protection in front of them. Common web attack patterns and unnecessary open ports were risk nobody had chosen to take. The job was to reduce that exposure without disturbing the traffic that was already flowing.
+
+<Scrolly>
+  <ArchDiagram slot="stage" diagram={edgeSecurity} title="Traffic from the internet in" plate="Plate 5.1" caption="Tap or hover a component for details." />
+
+  <Step focus="users,bots,alb,app">
+    The starting point: anything that reached the load balancer reached the services, and the security groups allowed far more than the services needed.
+  </Step>
+
+  <Step focus="bots,waf,alb" show="waf">
+    I deployed **AWS WAF** in front of the public services, with AWS managed rule groups for the common attack patterns and custom rules for this application's traffic.
+  </Step>
+
+  <Step focus="alb,app,db" show="sg">
+    Then the network rules. I audited every **security group**, removed inbound rules that were wider than needed, and segmented access by service: the services accept traffic only from the load balancer, the database only from the services that use it.
+  </Step>
+
+  <Step focus="users,waf,alb,app,db">
+    Finally, I documented the resulting network and edge baseline so it could be maintained, and so the next change starts from a known state.
+  </Step>
+</Scrolly>
