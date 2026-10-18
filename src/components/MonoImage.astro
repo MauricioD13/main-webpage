@@ -1,0 +1,40 @@
+---
+// Photos in the site's monochrome treatment. Hovering (or focusing the link around it)
+// brings the original colour back.
+import { Image } from "astro:assets";
+import type { ImageMetadata } from "astro";
+
+interface Props {
+  src: ImageMetadata;
+  alt: string;
+  class?: string;
+  widths?: number[];
+  sizes?: string;
+  loading?: "eager" | "lazy";
+}
+const { src, alt, class: className, widths = [480, 800, 1200, 1600], sizes = "(min-width: 1024px) 50vw, 100vw", loading = "lazy" } = Astro.props;
+---
+
+<div class:list={["mono", className]}>
+  <Image src={src} alt={alt} widths={widths} sizes={sizes} loading={loading} class="h-full w-full object-cover" />
+</div>
+
+<style>
+  .mono {
+    overflow: hidden;
+    background: #000;
+  }
+  .mono :global(img) {
+    filter: grayscale(1) contrast(1.1) brightness(0.85);
+    transition:
+      filter 0.7s ease,
+      transform 1.2s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  @media (hover: hover) {
+    :global(a:hover) .mono :global(img),
+    .mono:hover :global(img) {
+      filter: none;
+      transform: scale(1.03);
+    }
+  }
+</style>

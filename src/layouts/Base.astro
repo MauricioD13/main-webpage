@@ -12,22 +12,43 @@ interface Props {
   description?: string;
   /** URL of this page in each locale; defaults to each locale's home. */
   alternates?: Partial<Record<Lang, string>>;
-  /** Shown in the header once the reader scrolls, like a book's running head. */
-  runningHead?: string;
   ogType?: "website" | "article";
+  /** Absolute or root-relative URL of the social preview image (1200×630). */
+  ogImage?: string;
+  /** schema.org JSON-LD for this page (one object or a list). */
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
   /** Active top-level section for the nav. */
-  section?: "chapters" | "stories" | "books";
+  section?: "projects" | "stories" | "books";
   /** Untranslated fallback pages point search engines at the original. */
   canonicalPath?: string;
+  /** Pages that open on a full-bleed dark hero let the header float over it. */
+  overlayHeader?: boolean;
+  /** Not-indexable pages (404): no canonical or hreflang, robots noindex. */
+  noindex?: boolean;
 }
 
-const { lang, title, description, alternates = {}, runningHead, ogType = "website", section, canonicalPath } = Astro.props;
+const {
+  lang,
+  title,
+  description,
+  alternates = {},
+  ogType = "website",
+  ogImage,
+  jsonLd,
+  section,
+  canonicalPath,
+  overlayHeader = false,
+  noindex = false,
+} = Astro.props;
 const t = useTranslations(lang);
-const siteTitle = t("site.title");
-const fullTitle = title ? `${title} | ${siteTitle}` : `${siteTitle}, ${t("site.author")}`;
+const brand = ` | ${t("site.title")}`;
+// Keep titles within ~60 characters: drop the brand suffix when it would push past that.
+const fullTitle = title ? (title.length + brand.length <= 60 ? `${title}${brand}` : title) : `${t("site.title")}, ${t("site.role")}`;
 const desc = description ?? t("site.description");
 const altUrls = Object.fromEntries(langs.map((l) => [l, alternates[l] ?? localePath(l)])) as Record<Lang, string>;
 const canonical = new URL(canonicalPath ?? Astro.url.pathname, Astro.site);
+const image = new URL(ogImage ?? `/og/default-${lang}.png`, Astro.site);
+const ld = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
 ---
 
 <!doctype html>
@@ -37,32 +58,48 @@ const canonical = new URL(canonicalPath ?? Astro.url.pathname, Astro.site);
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{fullTitle}</title>
     <meta name="description" content={desc} />
-    <link rel="canonical" href={canonical} />
-    {langs.map((l) => <link rel="alternate" hreflang={l} href={new URL(altUrls[l], Astro.site)} />)}
-    <link rel="alternate" hreflang="x-default" href={new URL(altUrls.en, Astro.site)} />
-    <link rel="alternate" type="application/rss+xml" title={siteTitle} href={localePath(lang, "rss.xml").replace(/\/$/, "")} />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <meta property="og:title" content={title ?? siteTitle} />
+    {
+      noindex ? (
+        <meta name="robots" content="noindex" />
+      ) : (
+        <>
+          <link rel="canonical" href={canonical} />
+          {langs.map((l) => (
+            <link rel="alternate" hreflang={l} href={new URL(altUrls[l], Astro.site)} />
+          ))}
+          <link rel="alternate" hreflang="x-default" href={new URL(altUrls.en, Astro.site)} />
+        </>
+      )
+    }
+    <link rel="alternate" type="application/rss+xml" title={t("site.title")} href={localePath(lang, "rss.xml").replace(/\/$/, "")} />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta property="og:title" content={title ?? t("site.title")} />
     <meta property="og:description" content={desc} />
     <meta property="og:type" content={ogType} />
     <meta property="og:url" content={canonical} />
     <meta property="og:locale" content={lang === "es" ? "es_ES" : "en_US"} />
-    <meta name="theme-color" content="#1c3f73" />
-    <Font cssVariable="--font-literata" preload />
-    <Font cssVariable="--font-archivo" />
-    <script is:inline>
-      // Apply the saved reading light before first paint.
-      try {
-        const saved = localStorage.getItem("theme");
-        if (saved === "day" || saved === "night") document.documentElement.dataset.theme = saved;
-      } catch {}
-    </script>
+    <meta property="og:locale:alternate" content={lang === "es" ? "en_US" : "es_ES"} />
+    <meta property="og:site_name" content={t("site.title")} />
+    <meta property="og:image" content={image} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title ?? t("site.title")} />
+    <meta name="twitter:description" content={desc} />
+    <meta name="twitter:image" content={image} />
+    {ld.map((data) => <script type="application/ld+json" set:html={JSON.stringify(data)} />)}
+    <meta name="theme-color" content="#000000" />
+    <Font cssVariable="--font-archivo" preload />
+    <Font cssVariable="--font-instrument" preload />
   </head>
   <body>
-    <a href="#main" class="ui sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:bg-paper focus:px-3 focus:py-2">
+    <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[60] focus:rounded-full focus:bg-white focus:px-4 focus:py-2 focus:text-black">
       {t("nav.skip")}
     </a>
-    <Header lang={lang} alternates={altUrls} runningHead={runningHead} section={section} />
+    <Header lang={lang} alternates={altUrls} section={section} overlay={overlayHeader} />
     <main id="main">
       <slot />
     </main>

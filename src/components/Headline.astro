@@ -1,0 +1,18 @@
+---
+// Two-line display headline: a condensed grotesk statement, then an italic serif line.
+interface Props {
+  lead: string;
+  tail?: string;
+  as?: "h1" | "h2" | "h3" | "p";
+  /** Font size as any CSS length; defaults to the section-heading scale. */
+  size?: string;
+  class?: string;
+  id?: string;
+}
+const { lead, tail, as: Tag = "h2", size = "clamp(2.6rem, 6.2vw, 6.4rem)", class: className, id } = Astro.props;
+---
+
+<Tag class:list={["display", className]} style={`font-size:${size}`} id={id}>
+  {lead}
+  {tail && <span class="display-serif">{tail}</span>}
+</Tag>
