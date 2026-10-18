@@ -1,0 +1,130 @@
+---
+import HeroScene from "./three/HeroScene";
+import type { Lang } from "../i18n/ui";
+import { localePath, useTranslations } from "../i18n/utils";
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+// The italic line must never wrap: cap the size so it fits the title column.
+// Width estimate for Instrument Serif italic, calibrated on the measured EN/ES lines
+// (narrow glyphs ≈ 0.21em, others ≈ 0.46em, a few % above the real widths).
+const tail = t("home.hero.tail");
+const fitEm = [...tail].reduce((em, ch) => em + (/[iltfrj.,:;'’!\s]/.test(ch) ? 0.21 : 0.46), 0).toFixed(2);
+---
+
+<section class="hero theme-dark" aria-labelledby="hero-title">
+  <HeroScene client:only="react">
+    <div slot="fallback" class="hero-fallback" aria-hidden="true"></div>
+  </HeroScene>
+  <div class="hero-shade" aria-hidden="true"></div>
+
+  <div class="wrap hero-content">
+    <p class="pill hero-role" data-hero-in>
+      <span class="dot" aria-hidden="true"></span>{t("site.role")}
+    </p>
+    <div class="hero-grid">
+      <div class="hero-title-box">
+        <h1 id="hero-title" class="display hero-title" style={`--fit-em:${fitEm}`}>
+          <span class="line" data-hero-in>{t("home.hero.lead")}</span>
+          <span class="display-serif line" data-hero-in>{tail}</span>
+        </h1>
+      </div>
+      <div class="hero-side" data-hero-in>
+        <p class="lede hero-body">{t("home.hero.body")}</p>
+        <div class="mt-7 flex flex-wrap gap-3">
+          <a href={localePath(lang, "projects")} class="btn btn-primary">{t("home.hero.cta")}</a>
+          <a href="#contact" class="btn btn-ghost">{t("home.hero.contact")}</a>
+        </div>
+      </div>
+    </div>
+    <p class="hero-hint label max-md:hidden" aria-hidden="true" hidden data-hero-hint>{t("home.hero.hint")}</p>
+  </div>
+</section>
+
+<style>
+  .hero {
+    position: relative;
+    min-height: 100svh;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+  }
+  .hero-fallback {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(45% 55% at 68% 42%, rgb(255 255 255 / 0.1), transparent 70%);
+  }
+  /* Keeps the copy legible where it overlaps the constellation. */
+  .hero-shade {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(to top, #000 0%, rgb(0 0 0 / 0.75) 22%, transparent 55%),
+      linear-gradient(to right, rgb(0 0 0 / 0.6), transparent 45%);
+  }
+  .hero-content {
+    position: relative;
+    z-index: 1;
+    padding-top: 7rem;
+    padding-bottom: clamp(2.5rem, 6vh, 4.5rem);
+    pointer-events: none;
+  }
+  .hero-content :is(a, p) {
+    pointer-events: auto;
+  }
+  .hero-role {
+    --line: rgb(255 255 255 / 0.25);
+    margin-bottom: 1.8rem;
+  }
+  .dot {
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 50%;
+    background: var(--signal);
+    box-shadow: 0 0 10px var(--signal);
+  }
+  .hero-grid {
+    display: grid;
+    gap: 2.5rem;
+    align-items: end;
+  }
+  /* Container for cqi units: the headline is sized against its own column. */
+  .hero-title-box {
+    container-type: inline-size;
+    min-width: 0;
+  }
+  .hero-title {
+    font-size: min(clamp(3.2rem, 10.5vw, 11.5rem), calc(100cqi / var(--fit-em)));
+    line-height: 0.88;
+  }
+  .hero-title .line {
+    display: block;
+  }
+  .hero-body {
+    color: #c9c9c5;
+    max-width: 30rem;
+  }
+  .hero-hint {
+    margin-top: 2.5rem;
+    color: #6f6f6b;
+  }
+  @media (min-width: 1100px) {
+    .hero-grid {
+      grid-template-columns: minmax(0, 1fr) 24rem;
+      gap: 4rem;
+    }
+  }
+</style>
+
+<script>
+  import { gsap, reducedMotion } from "../scripts/motion";
+  // The interaction hint only makes sense when the 3D scene can move.
+  if (!reducedMotion()) document.querySelector("[data-hero-hint]")?.removeAttribute("hidden");
+  // The one orchestrated entrance on the site: the hero copy rises in.
+  if (!reducedMotion())
+    gsap.from("[data-hero-in]", { yPercent: 40, opacity: 0, duration: 1.1, ease: "power3.out", stagger: 0.12, delay: 0.15 });
+</script>

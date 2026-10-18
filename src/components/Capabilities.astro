@@ -1,0 +1,116 @@
+---
+import type { CollectionEntry } from "astro:content";
+import Headline from "./Headline.astro";
+import { capabilities } from "../data/capabilities";
+import type { Lang } from "../i18n/ui";
+import { entrySlug, localePath, useTranslations } from "../i18n/utils";
+
+interface Props {
+  lang: Lang;
+  projects: { entry: CollectionEntry<"projects">; fallback: boolean }[];
+}
+const { lang, projects } = Astro.props;
+const t = useTranslations(lang);
+const byKey = new Map(projects.map(({ entry }) => [entry.data.translationKey, entry]));
+---
+
+<section class="theme-light" aria-labelledby="skills-title">
+  <div class="wrap py-24 lg:py-36">
+    <div class="grid gap-8 lg:grid-cols-3">
+      <Headline id="skills-title" lead={t("home.skills.lead")} tail={t("home.skills.tail")} class="lg:col-span-2" />
+      <p class="lede self-end">{t("home.skills.body")}</p>
+    </div>
+
+    <ul class="skills mt-20 grid sm:grid-cols-2 lg:grid-cols-3">
+      {
+        capabilities.map((c) => {
+          const proof = c.proof.map((k) => byKey.get(k)).filter(Boolean);
+          return (
+            <li class="skill">
+              {c.figure && (
+                <p class="figure display">
+                  {c.figure.value}
+                  <span class="label block">{c.figure.label[lang]}</span>
+                </p>
+              )}
+              <h3 class="skill-title display">{c.title[lang]}</h3>
+              <p class="skill-body">{c.body[lang]}</p>
+              <ul class="mt-5 flex flex-wrap gap-1.5">
+                {c.tools.map((tool) => (
+                  <li class="pill">{tool}</li>
+                ))}
+              </ul>
+              {proof.length > 0 && (
+                <p class="proof">
+                  <span class="label">{t("home.skills.proof")}</span>
+                  {proof.map((p) => (
+                    <a href={localePath(lang, `projects/${entrySlug(p!.id)}`)}>{p!.data.title}</a>
+                  ))}
+                </p>
+              )}
+            </li>
+          );
+        })
+      }
+    </ul>
+  </div>
+</section>
+
+<style>
+  /*
+   * The grid lines are the cells' own borders, so they always sit between cells and never
+   * behind text: an outer frame plus one rule between columns and rows. Every cell has the
+   * same padding on both sides, so the grid is symmetric.
+   */
+  .skills {
+    list-style: none;
+    padding: 0;
+    border-top: 1px solid var(--line);
+    border-left: 1px solid var(--line);
+  }
+  .skill {
+    display: flex;
+    flex-direction: column;
+    padding: 2.4rem 1.6rem 2.6rem;
+    border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  .figure {
+    font-size: clamp(3.5rem, 6vw, 5.5rem);
+    line-height: 0.9;
+    margin-bottom: 1.4rem;
+  }
+  .figure .label {
+    font-family: var(--font-sans);
+    font-variation-settings: "wdth" 100;
+    letter-spacing: 0;
+    margin-top: 0.5rem;
+  }
+  .skill-title {
+    font-size: clamp(1.7rem, 2.3vw, 2.2rem);
+    line-height: 1;
+  }
+  .skill-body {
+    margin-top: 0.9rem;
+    color: var(--muted);
+    line-height: 1.55;
+    max-width: 26rem;
+  }
+  .proof {
+    margin-top: auto;
+    padding-top: 1.4rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem 1rem;
+    font-size: 0.9rem;
+  }
+  .proof .label {
+    width: 100%;
+  }
+  .proof a {
+    text-decoration: underline;
+    text-decoration-color: var(--signal);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.25em;
+  }
+</style>

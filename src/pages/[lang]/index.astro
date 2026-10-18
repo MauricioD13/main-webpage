@@ -1,76 +1,96 @@
 ---
 import Base from "../../layouts/Base.astro";
-import BookHero from "../../components/BookHero.astro";
+import HomeHero from "../../components/HomeHero.astro";
+import ServiceMarquee from "../../components/ServiceMarquee.astro";
+import Capabilities from "../../components/Capabilities.astro";
+import ProjectGrid from "../../components/ProjectGrid.astro";
 import StoryList from "../../components/StoryList.astro";
 import BookCover from "../../components/BookCover.astro";
+import Headline from "../../components/Headline.astro";
 import type { Lang } from "../../i18n/ui";
 import { entrySlug, getLocalizedEntries, localePath, useTranslations } from "../../i18n/utils";
 import { localeStaticPaths } from "../../lib/paths";
+import { personLd, websiteLd } from "../../lib/seo";
 
 export const getStaticPaths = localeStaticPaths;
 
 const lang = Astro.params.lang as Lang;
 const t = useTranslations(lang);
-const chapters = (await getLocalizedEntries("chapters", lang)).sort((a, b) => a.entry.data.chapter - b.entry.data.chapter);
+const projects = (await getLocalizedEntries("projects", lang)).sort((a, b) => a.entry.data.order - b.entry.data.order);
 const stories = (await getLocalizedEntries("stories", lang)).sort((a, b) => b.entry.data.date.valueOf() - a.entry.data.date.valueOf()).slice(0, 3);
 const reading = (await getLocalizedEntries("books", lang)).filter(({ entry }) => entry.data.status === "reading");
 ---
 
-<Base lang={lang} alternates={{ en: "/en/", es: "/es/" }}>
-  <BookHero lang={lang} chapters={chapters} />
-  <p class="home-lede mx-auto mt-6 max-w-[26rem] px-4 text-lg leading-relaxed text-ink-soft italic sm:max-w-xl">{t("home.lede")}</p>
+<Base lang={lang} alternates={{ en: "/en/", es: "/es/" }} overlayHeader jsonLd={[personLd(Astro.site!, lang), websiteLd(Astro.site!, lang)]}>
+  <HomeHero lang={lang} />
+  <ServiceMarquee />
+  <Capabilities lang={lang} projects={projects} />
 
-  <div class="mx-auto mt-24 grid max-w-6xl gap-16 px-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
-    <section aria-labelledby="latest-stories">
-      <div class="flex items-baseline justify-between gap-4">
-        <h2 id="latest-stories" class="display text-3xl">{t("home.latestStories")}</h2>
-        <a href={localePath(lang, "stories")} class="ui text-sm">{t("home.allStories")}</a>
+  <section class="theme-dark" aria-labelledby="projects-title">
+    <div class="wrap py-24 lg:py-36">
+      <div class="mb-14 flex flex-wrap items-end justify-between gap-8">
+        <Headline id="projects-title" lead={t("home.projects.lead")} tail={t("home.projects.tail")} />
+        <a href={localePath(lang, "projects")} class="btn btn-ghost">{t("home.projects.all")}</a>
       </div>
-      <div class="mt-6">
+      <ProjectGrid lang={lang} items={projects.slice(0, 5)} />
+    </div>
+  </section>
+
+  <section class="theme-light guides" aria-labelledby="stories-title">
+    <div class:list={["wrap grid gap-16 py-24 lg:py-32", { "lg:grid-cols-3": reading.length > 0 }]}>
+      <div class:list={{ "lg:col-span-2": reading.length > 0 }}>
+        <div class="mb-10 flex items-end justify-between gap-6">
+          <h2 id="stories-title" class="display text-[clamp(2.2rem,4vw,3.6rem)]">{t("home.stories.title")}</h2>
+          <a href={localePath(lang, "stories")} class="label underline decoration-signal decoration-2 underline-offset-4">{t("home.stories.all")}</a>
+        </div>
         <StoryList lang={lang} items={stories} />
       </div>
-    </section>
+      {
+        reading.length > 0 && (
+          <aside aria-labelledby="reading-title" class="lg:pl-8">
+            <h2 id="reading-title" class="display mb-10 text-[clamp(2.2rem,4vw,3.6rem)]">
+              {t("home.reading.title")}
+            </h2>
+            <ul class="space-y-6">
+              {reading.map(({ entry }) => (
+                <li>
+                  <a href={localePath(lang, `books/${entrySlug(entry.id)}`)} class="group flex items-start gap-5 no-underline">
+                    <BookCover book={entry.data.book} class="w-24 shrink-0" />
+                    <span>
+                      <span class="block text-lg leading-snug group-hover:underline">{entry.data.book.title}</span>
+                      <span class="label mt-1 block">{entry.data.book.author}</span>
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+            <a href={localePath(lang, "books")} class="label mt-8 inline-block underline decoration-signal decoration-2 underline-offset-4">
+              {t("home.reading.shelf")}
+            </a>
+          </aside>
+        )
+      }
+    </div>
+  </section>
 
-    {
-      reading.length > 0 && (
-        <section aria-labelledby="nightstand">
-          <h2 id="nightstand" class="display text-3xl">{t("home.reading")}</h2>
-          <ul class="mt-6 space-y-6">
-            {reading.map(({ entry }) => (
-              <li>
-                <a href={localePath(lang, `books/${entrySlug(entry.id)}`)} class="nightstand-book">
-                  <BookCover book={entry.data.book} color={entry.data.spine} class="w-28 shrink-0" />
-                  <span>
-                    <span class="block text-lg leading-snug">{entry.data.book.title}</span>
-                    <span class="ui mt-1 block text-sm text-ink-soft">{entry.data.book.author}</span>
-                  </span>
-                </a>
-              </li>
-            ))}
-          </ul>
-          <a href={localePath(lang, "books")} class="ui mt-6 inline-block text-sm">
-            {t("home.shelf")}
-          </a>
-        </section>
-      )
-    }
-  </div>
+  <section id="contact" class="theme-dark contact" aria-labelledby="contact-title">
+    <div class="wrap py-28 lg:py-44">
+      <Headline id="contact-title" lead={t("home.contact.lead")} tail={t("home.contact.tail")} size="clamp(3rem, 9vw, 9.5rem)" />
+      <div class="mt-12 grid gap-10 lg:grid-cols-3">
+        <p class="lede lg:col-span-2 lg:max-w-2xl">{t("home.contact.body")}</p>
+        <div class="flex flex-wrap items-start gap-3 lg:justify-end">
+          <a href="https://www.linkedin.com/in/mauricio-cuello-/" class="btn btn-primary" rel="me">{t("home.contact.cta")}</a>
+          <a href="https://github.com/MauricioD13" class="btn btn-ghost" rel="me">GitHub</a>
+        </div>
+      </div>
+    </div>
+  </section>
 </Base>
 
 <style>
-  :global(.hero.is-3d) ~ .home-lede {
-    display: none;
-  }
-  .nightstand-book {
-    display: flex;
-    gap: 1rem;
-    align-items: flex-start;
-    color: var(--ink);
-    text-decoration: none;
-  }
-  .nightstand-book:hover .text-lg {
-    text-decoration: underline;
-    text-decoration-color: var(--signal);
-    text-underline-offset: 0.2em;
+  .contact {
+    background:
+      radial-gradient(60% 80% at 85% 100%, rgb(242 179 62 / 0.12), transparent 60%),
+      var(--void);
   }
 </style>

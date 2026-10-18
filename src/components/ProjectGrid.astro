@@ -1,0 +1,21 @@
+---
+import type { CollectionEntry } from "astro:content";
+import ProjectCard from "./ProjectCard.astro";
+import type { Lang } from "../i18n/ui";
+
+interface Props {
+  lang: Lang;
+  items: { entry: CollectionEntry<"projects">; fallback: boolean }[];
+}
+const { lang, items } = Astro.props;
+---
+
+<ul class="grid gap-5 lg:grid-cols-2 lg:gap-6">
+  {
+    items.map(({ entry, fallback }, i) => (
+      <li class:list={{ "lg:col-span-2": i === 0 }}>
+        <ProjectCard lang={lang} entry={entry} fallback={fallback} feature={i === 0} />
+      </li>
+    ))
+  }
+</ul>
