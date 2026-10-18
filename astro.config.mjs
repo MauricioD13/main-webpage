@@ -19,15 +19,7 @@ export default defineConfig({
   },
   fonts: [
     {
-      name: "Literata",
-      cssVariable: "--font-literata",
-      provider: fontProviders.google(),
-      weights: ["200 900"],
-      styles: ["normal", "italic"],
-      subsets: ["latin", "latin-ext"],
-      fallbacks: ["Georgia", "serif"],
-    },
-    {
+      // Display (condensed via the width axis), UI and body.
       name: "Archivo",
       cssVariable: "--font-archivo",
       provider: fontProviders.google(),
@@ -37,17 +29,29 @@ export default defineConfig({
       fallbacks: ["system-ui", "sans-serif"],
       options: { experimental: { variableAxis: { wdth: [["62", "125"]] } } },
     },
+    {
+      // The italic second line of display headlines.
+      name: "Instrument Serif",
+      cssVariable: "--font-instrument",
+      provider: fontProviders.google(),
+      weights: [400],
+      styles: ["normal", "italic"],
+      subsets: ["latin", "latin-ext"],
+      fallbacks: ["Georgia", "serif"],
+    },
   ],
   integrations: [
-    // React is only used to server-render aws-react-icons to static SVG — no client hydration.
+    // React: server-rendered AWS icons, plus client-only React Three Fiber islands.
     react(),
     mdx(),
     sitemap({
       i18n: { defaultLocale: "en", locales: { en: "en", es: "es" } },
+      // "/" is a language redirect (noindex) and 404 is not content: keep both out.
+      filter: (page) => !/^https?:\/\/[^/]+\/(404\/?)?$/.test(page),
     }),
   ],
   markdown: {
-    shikiConfig: { themes: { light: "github-light", dark: "github-dark" }, defaultColor: false },
+    shikiConfig: { theme: "github-dark", wrap: true },
   },
   vite: { plugins: [tailwindcss()] },
 });
