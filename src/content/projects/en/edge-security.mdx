@@ -2,7 +2,7 @@
 title: "Closing the front door"
 subtitle: "Edge protection and least-privilege network rules, added without downtime"
 summary: "Public workloads had permissive security groups and nothing in front of them at the application layer. I added AWS WAF and tightened the network rules in place."
-chapter: 5
+order: 5
 date: 2025-09-18
 period: "2025"
 role: "Cloud security assessment and hardening"
@@ -21,7 +21,7 @@ import { edgeSecurity } from "@/data/diagrams";
 The client's public-facing workloads were reachable through overly permissive network rules, with no application-layer protection in front of them. Common web attack patterns and unnecessary open ports were risk nobody had chosen to take. The job was to reduce that exposure without disturbing the traffic that was already flowing.
 
 <Scrolly>
-  <ArchDiagram slot="stage" diagram={edgeSecurity} title="Traffic from the internet in" plate="Plate 5.1" caption="Tap or hover a component for details." />
+  <ArchDiagram slot="stage" diagram={edgeSecurity} title="Traffic from the internet in" plate="Fig. 5.1" caption="Tap or hover a component for details." />
 
   <Step focus="users,bots,alb,app">
     The starting point: anything that reached the load balancer reached the services, and the security groups allowed far more than the services needed.

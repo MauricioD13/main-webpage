@@ -29,7 +29,7 @@ export function formatDate(date: Date, lang: Lang, opts?: Intl.DateTimeFormatOpt
   });
 }
 
-type Localized = "chapters" | "stories" | "books";
+type Localized = "projects" | "stories" | "books";
 
 export const entryLang = (id: string) => id.split("/")[0] as Lang;
 export const entrySlug = (id: string) => id.split("/").slice(1).join("/");

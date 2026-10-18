@@ -11,14 +11,15 @@ const shared = {
   draft: z.boolean().default(false),
 };
 
-const chapters = defineCollection({
-  loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/chapters" }),
+const projects = defineCollection({
+  loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/projects" }),
   schema: ({ image }) =>
     z.object({
       ...shared,
       subtitle: z.string(),
       summary: z.string(),
-      chapter: z.number().int().positive(),
+      /** Display order on the projects list (1 = first). */
+      order: z.number().int().positive(),
       period: z.string(),
       role: z.string().optional(),
       stack: z.array(z.string()).default([]),
@@ -57,9 +58,9 @@ const books = defineCollection({
       rating: z.number().min(0).max(5).optional(),
       takeaways: z.array(z.string()).default([]),
       quotes: z.array(z.string()).default([]),
-      relatedChapters: z.array(reference("chapters")).default([]),
+      relatedProjects: z.array(reference("projects")).default([]),
       spine: z.string().optional(),
     }),
 });
 
-export const collections = { chapters, stories, books };
+export const collections = { projects, stories, books };

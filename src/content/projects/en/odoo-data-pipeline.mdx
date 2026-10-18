@@ -1,13 +1,13 @@
 ---
 title: "Reports nobody had to ask for"
 subtitle: "A serverless pipeline from Odoo to self-service dashboards"
-summary: "Odoo held the data but couldn't analyze it. A Python script on Lambda grew into a Terraform-templated pipeline: S3 by date, Athena for SQL, Metabase for everyone else."
-chapter: 4
+summary: "Odoo held the data but couldn't analyze it. A Lambda script grew into a Terraform-templated pipeline: S3 by date, Athena for SQL, Metabase dashboards."
+order: 4
 date: 2025-06-05
 period: "2025"
 role: "Data engineering"
 stack: ["Python", "Lambda", "EventBridge Scheduler", "SNS", "Parameter Store", "S3", "Athena", "ECS", "RDS", "Metabase", "Terraform", "GitHub Actions"]
-cover: ../../../assets/chapters/odoo-data-pipeline/serverless_data_pipeline.png
+cover: ../../../assets/projects/odoo-data-pipeline/serverless_data_pipeline.png
 outcomes:
   - value: "1"
     label: "Terraform module behind every report"
@@ -27,7 +27,7 @@ Odoo is a strong ERP with features for running most of a business, but analyzing
 Odoo does have a capable JSON API for pulling raw data. I started writing Python scripts against it to turn billing and sales data into simple reports. After a few trials it was clear these could bring real value, so I focused first on something useful for the sales team.
 
 <Scrolly>
-  <ArchDiagram slot="stage" diagram={dataPipeline} title="Odoo to dashboards" plate="Plate 4.1" caption="Tap or hover a component for details." />
+  <ArchDiagram slot="stage" diagram={dataPipeline} title="Odoo to dashboards" plate="Fig. 4.1" caption="Tap or hover a component for details." />
 
   <Step focus="odoo,lambda,ssm" show="odoo,lambda,ssm">
     **Basic reporting.** I needed somewhere to run short scripts on a schedule with as little upkeep as possible. A **Lambda** function was the natural fit, with the Odoo API key kept in **Parameter Store**.
@@ -46,7 +46,7 @@ Odoo does have a capable JSON API for pulling raw data. I started writing Python
   </Step>
 
   <Step focus="athena,metabase,rds,team" show="metabase,rds">
-    For the people side I chose **Metabase**: easy to read, self-service dashboards, flexible queries, and a free self-hosted version. It runs as a container on the **ECS** cluster from Chapter III, with **RDS** for its own metadata, and it queries S3 through Athena.
+    For the people side I chose **Metabase**: easy to read, self-service dashboards, flexible queries, and a free self-hosted version. It runs as a container on the **ECS** cluster from the [ECS delivery project](../ecs-delivery/), with **RDS** for its own metadata, and it queries S3 through Athena.
   </Step>
 
   <Step focus="ci,lambda" show="ci">

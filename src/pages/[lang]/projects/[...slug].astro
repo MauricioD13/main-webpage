@@ -1,0 +1,175 @@
+---
+import { render } from "astro:content";
+import { getImage } from "astro:assets";
+import { articleLd } from "../../../lib/seo";
+import Base from "../../../layouts/Base.astro";
+import MonoImage from "../../../components/MonoImage.astro";
+import FallbackNotice from "../../../components/FallbackNotice.astro";
+import { langs, type Lang } from "../../../i18n/ui";
+import { entrySlug, formatDate, getAlternates, getLocalizedEntries, localePath, useTranslations } from "../../../i18n/utils";
+
+export async function getStaticPaths() {
+  const perLang = await Promise.all(
+    langs.map(async (lang) => {
+      const items = (await getLocalizedEntries("projects", lang)).sort((a, b) => a.entry.data.order - b.entry.data.order);
+      const link = (it?: (typeof items)[number]) =>
+        it && { href: localePath(lang, `projects/${entrySlug(it.entry.id)}`), title: it.entry.data.title, subtitle: it.entry.data.subtitle };
+      return items.map(({ entry, fallback }, i) => ({
+        params: { lang, slug: entrySlug(entry.id) },
+        props: { entry, fallback, prev: link(items[i - 1]), next: link(items[i + 1]) },
+      }));
+    }),
+  );
+  return perLang.flat();
+}
+
+const { entry, fallback, prev, next } = Astro.props;
+const lang = Astro.params.lang as Lang;
+const t = useTranslations(lang);
+const { Content } = await render(entry);
+const d = entry.data;
+const alternates = await getAlternates("projects", "projects", d.translationKey);
+const og = d.cover ? (await getImage({ src: d.cover, width: 1200, height: 630, fit: "cover", format: "jpg" })).src : undefined;
+const ld = articleLd({ site: Astro.site!, url: new URL(Astro.url.pathname, Astro.site), lang, type: "TechArticle", headline: d.title, description: d.summary, datePublished: d.date, image: og, keywords: d.stack });
+---
+
+<Base lang={lang} title={d.title} description={d.summary} alternates={alternates} ogType="article" ogImage={og} jsonLd={ld} section="projects" canonicalPath={fallback ? alternates.en : undefined}>
+  <article data-reading lang={fallback ? "en" : lang}>
+    <header class="theme-dark">
+      <div class="wrap grid gap-10 pt-12 pb-10 lg:grid-cols-[minmax(0,1fr)_26rem] lg:gap-20 lg:pt-16 lg:pb-12">
+        <div>
+          <a href={localePath(lang, "projects")} class="pill no-underline">{t("project.all")}</a>
+          <h1 class="display mt-6 text-[clamp(2.6rem,6vw,6rem)]">{d.title}</h1>
+          <p class="display-serif mt-4 max-w-3xl text-[clamp(1.4rem,2.3vw,2.1rem)] text-muted">{d.subtitle}</p>
+          <p class="label mt-6">
+            {t("post.by")} {t("site.title")}, <time datetime={d.date.toISOString()}>{formatDate(d.date, lang)}</time>
+          </p>
+          {fallback && <FallbackNotice lang={lang} />}
+        </div>
+        <dl class="grid grid-cols-2 content-end gap-x-6 gap-y-4 text-sm lg:grid-cols-1 lg:gap-6">
+          <div>
+            <dt class="label">{t("project.period")}</dt>
+            <dd class="mt-1 text-base">{d.period}</dd>
+          </div>
+          {
+            d.role && (
+              <div>
+                <dt class="label">{t("project.role")}</dt>
+                <dd class="mt-1 text-base">{d.role}</dd>
+              </div>
+            )
+          }
+          <div class="col-span-2 lg:col-span-1">
+            <dt class="label">{t("project.stack")}</dt>
+            <dd class="mt-1 text-base lg:hidden">{d.stack.join(", ")}</dd>
+            <dd class="mt-2 hidden flex-wrap gap-1.5 lg:flex">{d.stack.map((s) => <span class="pill">{s}</span>)}</dd>
+          </div>
+        </dl>
+      </div>
+      {d.cover && <MonoImage src={d.cover} alt="" class="cover max-md:hidden" loading="eager" sizes="100vw" />}
+      {
+        d.outcomes.length > 0 && (
+          <div class="wrap">
+            <ul class="outcomes" aria-label={t("project.outcomes")}>
+              {d.outcomes.map((o) => (
+                <li>
+                  <span class="display outcome-value">{o.value}</span>
+                  <span class="label mt-2 block">{o.label}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )
+      }
+    </header>
+
+    <div class="theme-light">
+      <div class="wrap project-body prose-site pt-14 pb-24">
+        <Content />
+      </div>
+    </div>
+
+    <nav class="theme-dark" aria-label={t("nav.projects")}>
+      <div class="wrap grid gap-5 py-16 md:grid-cols-2">
+        {
+          prev ? (
+            <a href={prev.href} class="turn" rel="prev">
+              <span class="label">{t("project.prev")}</span>
+              <span class="display turn-title">{prev.title}</span>
+            </a>
+          ) : (
+            <span class="max-md:hidden" />
+          )
+        }
+        {
+          next && (
+            <a href={next.href} class="turn md:text-right" rel="next">
+              <span class="label">{t("project.next")}</span>
+              <span class="display turn-title">{next.title}</span>
+            </a>
+          )
+        }
+      </div>
+      <p class="wrap label pb-12">{t("post.published")} {formatDate(d.date, lang)}</p>
+    </nav>
+  </article>
+</Base>
+
+<style>
+  /*
+   * A short cinematic strip: atmosphere without pushing the article below the fold.
+   * :global because the class lands on MonoImage's root, outside this page's scope.
+   */
+  :global(.mono.cover) {
+    height: clamp(6rem, 12vw, 11rem);
+  }
+  .outcomes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(9rem, 40%), 1fr));
+    list-style: none;
+    margin: 0;
+    padding: 1.6rem 0 1.8rem;
+    gap: 1.5rem;
+    border-top: 1px solid var(--line);
+  }
+  .outcome-value {
+    display: block;
+    font-size: clamp(2.1rem, 3.6vw, 3.2rem);
+    line-height: 0.95;
+  }
+  /* Text runs in a reading column; plates and scrollytelling use the full width. */
+  .project-body > :global(*) {
+    max-width: 44rem;
+    margin-inline: auto;
+  }
+  .project-body > :global(.scrolly) {
+    max-width: none;
+  }
+  .project-body > :global(figure.plate) {
+    max-width: 60rem;
+    margin-block: 3.5rem;
+  }
+  .turn {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    padding: 2rem;
+    border-radius: var(--radius-card);
+    background: var(--raised);
+    text-decoration: none;
+    transition: background-color 0.3s;
+  }
+  .turn:hover {
+    background: #1f1f1f;
+  }
+  .turn-title {
+    font-size: clamp(1.6rem, 2.6vw, 2.4rem);
+    line-height: 1;
+  }
+  .turn:hover .turn-title {
+    text-decoration: underline;
+    text-decoration-color: var(--signal);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.15em;
+  }
+</style>

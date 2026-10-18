@@ -1,13 +1,13 @@
 ---
 title: "Under attack, then three tiers"
 subtitle: "A port scan took down a monolith, and the rebuild became my first Terraform project"
-summary: "Scanner traffic from a single origin kept crashing a Laravel server. After stopping the bleeding, I rebuilt it as stateless instances behind a load balancer, with RDS, S3 and Terraform."
-chapter: 2
+summary: "Scanner traffic kept crashing a Laravel server. I stopped the attack, then rebuilt it as stateless instances behind a load balancer, with Terraform."
+order: 2
 date: 2024-08-30
 period: "2024"
 role: "Cloud administration and infrastructure as code, freelance"
 stack: ["EC2", "Auto Scaling", "Application Load Balancer", "RDS MySQL", "S3", "CloudWatch", "SNS", "Terraform", "Checkov"]
-cover: ../../../assets/chapters/under-attack-three-tiers/aws-three-tier-arch.jpg
+cover: ../../../assets/projects/under-attack-three-tiers/aws-three-tier-arch.jpg
 outcomes:
   - value: "2+"
     label: "instances behind the load balancer, never one"
@@ -27,8 +27,8 @@ import { singleServer, threeTier } from "@/data/diagrams";
 A sudden server crash is every developer's nightmare, and that's where this one starts. One afternoon the server went down without warning. It ran Nginx as a reverse proxy in front of a PHP Laravel backend, a setup that had been stable until then.
 
 <Scrolly>
-  <ArchDiagram slot="stage" panel="before" diagram={singleServer} title="Before: one server, one target" plate="Plate 2.1" />
-  <ArchDiagram slot="stage" panel="after" diagram={threeTier} title="After: three tiers" plate="Plate 2.2" caption="Tap or hover a component for details." />
+  <ArchDiagram slot="stage" panel="before" diagram={singleServer} title="Before: one server, one target" plate="Fig. 2.1" />
+  <ArchDiagram slot="stage" panel="after" diagram={threeTier} title="After: three tiers" plate="Fig. 2.2" caption="Tap or hover a component for details." />
 
   <Step panel="before" focus="scanner,ec2">
     The Nginx logs had the answer: the server was under attack. Traffic from one origin was port scanning and brute-force fuzzing subdomains. The volume alone overloaded the instance and crashed it, again and again.

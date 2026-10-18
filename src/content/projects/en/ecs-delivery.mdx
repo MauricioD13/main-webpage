@@ -1,0 +1,116 @@
+---
+title: "From manual deploys to a pipeline"
+subtitle: "Moving every container from one EC2 host to ECS on Fargate, and putting the path from merge to running service on rails"
+summary: "Releases and servers depended on one person. I moved the containers from a single EC2 host to ECS on Fargate, with EFS and RDS, and automated each release."
+order: 3
+date: 2025-03-22
+period: "2025"
+role: "Containers and CI/CD"
+stack: ["Docker", "Amazon ECS", "AWS Fargate", "Amazon ECR", "Application Load Balancer", "ACM", "Amazon EFS", "Amazon RDS", "CloudWatch", "CI/CD"]
+outcomes:
+  - value: "Automated"
+    label: "from merge to deploy"
+  - value: "Rolling"
+    label: "deployments, no downtime"
+translationKey: ecs-delivery
+---
+
+import Scrolly from "@/components/visual/Scrolly.astro";
+import Step from "@/components/visual/Step.astro";
+import ArchDiagram from "@/components/visual/ArchDiagram.astro";
+import { ecsBefore, ecsAfter, ecsDelivery } from "@/data/diagrams";
+
+## Context
+
+The application was deployed by hand, with no consistent process, and every release depended on me having the time to do it. For the company the problem wasn't only speed: the whole operation rested on one person, and every hour spent deploying or looking after servers was an hour not spent building the product.
+
+The goal was a platform that could run without constant supervision: a container environment on ECS and a pipeline that takes a commit all the way to a running service.
+
+## Why ECS
+
+At first, business needs made a single EC2 instance running containers the right call (see the [Odoo data pipeline](../odoo-data-pipeline/)), with Traefik as the gateway handling routes and certificates. But the non-functional requirements, maintenance above all, pushed toward an architecture that could look after itself.
+
+That's where **Amazon ECS** won. It's a mature AWS service with a simpler API than Kubernetes, no control-plane cost, and it has been proven by engineering teams at many companies. ECS also offers the **Fargate** launch type, where AWS manages the compute underneath. That takes work off the tech team in exchange for an extra cost, one the company was willing to pay because the operations team is small.
+
+## How ECS describes a workload
+
+Orchestrators mostly work the same way. There's a workload you want managed, a definition of that workload, and something that keeps it running. ECS has a name for each piece.
+
+### Task definitions
+
+The definition says how many resources the workload gets, which storage it uses, which ports are open, which container image runs, how logs are handled, and so on. In Docker that's the `docker-compose.yaml` file; in Kubernetes, the manifest of a pod or deployment. ECS calls them **task definitions**: JSON documents that the service versions automatically.
+
+### Services
+
+Once the workload is defined, you need a piece of software to babysit it. It keeps the number of copies you asked for running, starts a new one when one stops, and can run scheduled workloads for compute-heavy moments (in ECS, with help from EventBridge Scheduler). The closest thing in Docker Compose is the `restart` policy, but it only covers a single container; to run a service across several containers you need a Docker Swarm service. In ECS it's the **ECS service**.
+
+## The migration
+
+The move happened in three parts: the data left the server first, then AWS took over routing and certificates, and only then did the containers move.
+
+<Scrolly>
+  <ArchDiagram slot="stage" panel="before" diagram={ecsBefore} title="Before: one host for everything" plate="Fig. 3.1" />
+  <ArchDiagram slot="stage" panel="after" diagram={ecsAfter} title="After: ECS on Fargate" plate="Fig. 3.2" caption="Tap or hover a component for details." />
+
+  <Step panel="before" focus="users,traefik,apps">
+    **Where it started.** One EC2 instance ran every container with Docker Compose. **Traefik** sat in front as the gateway: it found services through Docker labels, routed each subdomain and renewed the Let's Encrypt certificates on its own.
+  </Step>
+
+  <Step focus="apps,mysql,volume">
+    What tied the containers to that machine was their state. The MySQL databases ran in a container next to the apps, and files lived on the server's disk. Nothing could move to ECS until that state lived somewhere else.
+  </Step>
+
+  <Step panel="after" focus="rds,efs" show="aws,rds,efs">
+    **Data first.** I started by making sure the containers didn't depend on the server's storage. The files went to an **Amazon EFS** mount, and the databases to an **RDS** instance loaded from a `mysqldump`.
+
+    With the data off the virtual machine, moving the containers only needed a short service window.
+  </Step>
+
+  <Step focus="users,alb,acm" show="users,alb,acm">
+    **Routing and certificates.** Native AWS services replaced Traefik. The **Application Load Balancer** routes traffic through rules on its HTTPS listener, here by subdomain, to one target group per service. What replaces Traefik's label-based discovery is the native ECS integration: the service registers and deregisters its tasks in its target group automatically.
+
+    **ACM** (AWS Certificate Manager) manages the TLS certificates and renews them, the way Traefik did with Let's Encrypt. A wildcard certificate covers every subdomain with a single certificate on the listener.
+  </Step>
+
+  <Step focus="ecs,tasks,ecr,cw" show="cluster,ecs,tasks,ecr,cw">
+    **The containers.** With the cluster created, I wrote the task definitions that replaced the Compose files and deployed each **ECS** service on **Fargate**, behind the load balancer, with logs going to CloudWatch.
+
+    Only once a service was up and running, and its storage was connected (RDS or EFS), did I switch the load balancer's target to it.
+  </Step>
+</Scrolly>
+
+## What went wrong
+
+After working through several permission and network errors around the storage services, the containers were fully migrated. These were the problems along the way:
+
+- **Security groups.** The tasks started but couldn't mount EFS, and timed out mounting the file system. I had written the rules with the original EC2 instance in mind, but Fargate tasks have their own security group. NFS traffic (port 2049) from the tasks' security group to EFS was missing.
+- **IAM roles.** At first I mixed up the task execution role, which ECS uses to pull the image from ECR, send logs and read secrets, with the task role, which the application inside the container uses. So the task wouldn't start: it couldn't pull its image.
+- **EFS permissions.** An EFS access point enforces a POSIX user and group (UID/GID). If they don't match the user the container runs as, the application fails on writes with permission denied. Check which user the image runs as before you configure the access point.
+
+The migration was done when each service answered on its own subdomain and every health check was green.
+
+## From merge to running service
+
+With the platform in place, the other half of the goal was getting new versions onto it without me.
+
+<Scrolly>
+  <ArchDiagram slot="stage" diagram={ecsDelivery} title="Merge to running service" plate="Fig. 3.3" caption="Tap or hover a component for details." />
+
+  <Step focus="users,alb,ecs" show="ecs,alb,users,cw">
+    The destination was ready: the **ECS** service behind the load balancer, with its logs in CloudWatch. What was missing was a reliable way to ship to it.
+  </Step>
+
+  <Step focus="dev,ci" show="dev,ci">
+    Then the trigger. A merge to the main branch starts the **pipeline**: build the image, run the tests. If the tests fail, nothing ships.
+  </Step>
+
+  <Step focus="ci,ecr,ecs" show="ecr">
+    A green build pushes the image to the **registry** and deploys it to ECS with a **rolling** update: new tasks have to pass health checks before the old ones stop, so users never see a gap.
+  </Step>
+
+  <Step focus="dev,ci,ecr,ecs,alb,users">
+    The last piece wasn't technical: I documented the process so the team could run and change it without me.
+  </Step>
+</Scrolly>
+
+The same cluster became home for more than this app. Later, it ran the Metabase instance from the [Odoo data pipeline](../odoo-data-pipeline/).
