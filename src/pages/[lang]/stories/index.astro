@@ -1,5 +1,6 @@
 ---
 import Base from "../../../layouts/Base.astro";
+import Headline from "../../../components/Headline.astro";
 import StoryList from "../../../components/StoryList.astro";
 import type { Lang } from "../../../i18n/ui";
 import { getLocalizedEntries, localePath, useTranslations } from "../../../i18n/utils";
@@ -12,12 +13,18 @@ const t = useTranslations(lang);
 const items = (await getLocalizedEntries("stories", lang)).sort((a, b) => b.entry.data.date.valueOf() - a.entry.data.date.valueOf());
 ---
 
-<Base lang={lang} title={t("stories.title")} description={t("stories.lede")} alternates={{ en: localePath("en", "stories"), es: localePath("es", "stories") }} section="stories">
-  <div class="mx-auto max-w-4xl px-4 pt-14 sm:px-6 lg:pt-20">
-    <h1 class="display text-[clamp(2.6rem,6vw,4.4rem)]">{t("stories.title")}</h1>
-    <p class="measure mt-5 text-lg leading-relaxed text-ink-soft">{t("stories.lede")}</p>
-    <div class="mt-12">
-      <StoryList lang={lang} items={items} />
+<Base lang={lang} title={t("nav.stories")} description={t("stories.meta")} alternates={{ en: localePath("en", "stories"), es: localePath("es", "stories") }} section="stories">
+  <section class="theme-dark">
+    <div class="wrap grid gap-8 pt-20 pb-16 lg:grid-cols-3 lg:pt-28">
+      <Headline as="h1" lead={t("stories.lead")} tail={t("stories.tail")} class="lg:col-span-2" size="clamp(3rem, 8vw, 8rem)" />
+      <p class="lede self-end">{t("stories.lede")}</p>
     </div>
-  </div>
+  </section>
+  <section class="theme-light guides">
+    <div class="wrap py-16 lg:py-24">
+      <div class="max-w-4xl">
+        <StoryList lang={lang} items={items} />
+      </div>
+    </div>
+  </section>
 </Base>

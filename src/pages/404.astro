@@ -1,19 +1,22 @@
 ---
 import Base from "../layouts/Base.astro";
+import Headline from "../components/Headline.astro";
 import { localePath, useTranslations } from "../i18n/utils";
 
 // Static 404 can't know the reader's language; English with a link to both.
 const t = useTranslations("en");
 ---
 
-<Base lang="en" title={t("404.title")}>
-  <div class="mx-auto max-w-2xl px-4 py-24 sm:px-6">
-    <p class="display text-[6rem] leading-none text-accent">404</p>
-    <h1 class="display mt-6 text-4xl">{t("404.title")}</h1>
-    <p class="mt-4 text-lg text-ink-soft">{t("404.body")}</p>
-    <p class="ui mt-8 flex gap-6">
-      <a href={localePath("en", "chapters")}>{t("404.cta")}</a>
-      <a href={localePath("es", "chapters")} lang="es">Ir al índice</a>
-    </p>
-  </div>
+<Base lang="en" title="404" noindex>
+  <section class="theme-dark">
+    <div class="wrap flex min-h-[70vh] flex-col justify-end py-24">
+      <p class="label">404</p>
+      <Headline as="h1" lead={t("404.lead")} tail={t("404.tail")} class="mt-6" size="clamp(3rem, 9vw, 9rem)" />
+      <p class="lede mt-8 max-w-xl">{t("404.body")}</p>
+      <p class="mt-10 flex flex-wrap gap-3">
+        <a href={localePath("en", "projects")} class="btn btn-primary">{t("404.cta")}</a>
+        <a href={localePath("es", "projects")} class="btn btn-ghost" lang="es">Ir a los proyectos</a>
+      </p>
+    </div>
+  </section>
 </Base>

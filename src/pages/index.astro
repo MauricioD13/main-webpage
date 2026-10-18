@@ -10,7 +10,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Tech Histories</title>
     <link rel="canonical" href={new URL("/en/", Astro.site)} />
-    <meta name="robots" content="noindex" />
     <script is:inline>
       const saved = (() => { try { return localStorage.getItem("lang"); } catch { return null; } })();
       const pref = saved || (navigator.languages || [navigator.language]).find((l) => /^(en|es)/i.test(l)) || "en";

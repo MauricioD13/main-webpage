@@ -2,6 +2,7 @@
 import Base from "../../../layouts/Base.astro";
 import BookCover from "../../../components/BookCover.astro";
 import Rating from "../../../components/Rating.astro";
+import Headline from "../../../components/Headline.astro";
 import type { Lang } from "../../../i18n/ui";
 import { entrySlug, getLocalizedEntries, localePath, useTranslations } from "../../../i18n/utils";
 import { localeStaticPaths } from "../../../lib/paths";
@@ -27,17 +28,20 @@ const spine = (pages = 320) => ({
 });
 ---
 
-<Base lang={lang} title={t("books.title")} description={t("books.lede")} alternates={{ en: localePath("en", "books"), es: localePath("es", "books") }} section="books">
-  <div class="mx-auto max-w-6xl px-4 pt-14 sm:px-6 lg:pt-20">
-    <h1 class="display text-[clamp(2.6rem,6vw,4.4rem)]">{t("books.title")}</h1>
-    <p class="measure mt-5 text-lg leading-relaxed text-ink-soft">{t("books.lede")}</p>
+<Base lang={lang} title={t("nav.books")} description={t("books.lede")} alternates={{ en: localePath("en", "books"), es: localePath("es", "books") }} section="books">
+  <section class="theme-dark shelf-page">
+    <div class="wrap pt-20 pb-24 lg:pt-28 lg:pb-32">
+      <div class="grid gap-8 lg:grid-cols-3">
+        <Headline as="h1" lead={t("books.lead")} tail={t("books.tail")} class="lg:col-span-2" size="clamp(3rem, 8vw, 8rem)" />
+        <p class="lede self-end">{t("books.lede")}</p>
+      </div>
 
     {
       items.length === 0 ? (
-        <p class="mt-16 border-y border-rule py-10 text-lg text-ink-soft italic">{t("books.empty")}</p>
+        <p class="lede mt-20 border-y border-line py-12">{t("books.empty")}</p>
       ) : (
         <>
-          <div class="filters ui mt-10" role="group" aria-label={t("books.filter")} data-filters hidden>
+          <div class="filters mt-14" role="group" aria-label={t("books.filter")} data-filters hidden>
             {(["all", "tech", "business"] as const).map((f, i) => (
               <button type="button" data-filter={f} aria-pressed={i === 0 ? "true" : "false"}>
                 {t(`books.${f}`)}
@@ -45,11 +49,12 @@ const spine = (pages = 320) => ({
             ))}
           </div>
 
+          <div class="shelves mt-10">
           {shelves.map(
             (shelf) =>
               shelf.books.length > 0 && (
-                <section class="shelf-block mt-12" data-shelf={shelf.category} aria-labelledby={`shelf-${shelf.category}`}>
-                  <h2 id={`shelf-${shelf.category}`} class="ui text-sm text-ink-soft">
+                <section class="shelf-block" data-shelf={shelf.category} aria-labelledby={`shelf-${shelf.category}`}>
+                  <h2 id={`shelf-${shelf.category}`} class="label">
                     {shelf.label}
                   </h2>
                   <ul class="shelf">
@@ -67,7 +72,7 @@ const spine = (pages = 320) => ({
                             aria-describedby={`status-${entry.id.replace("/", "-")}`}
                           >
                             <span class="spine-title">{d.book.title}</span>
-                            <span class="spine-author ui">{d.book.author.split(",")[0]}</span>
+                            <span class="spine-author">{d.book.author.split(",")[0]}</span>
                             {d.status === "reading" && <span class="bookmark" aria-hidden="true" />}
                           </a>
                           <span id={`status-${entry.id.replace("/", "-")}`} class="sr-only">
@@ -80,6 +85,7 @@ const spine = (pages = 320) => ({
                 </section>
               ),
           )}
+          </div>
 
           {items.map(({ entry }, i) => {
             const d = entry.data;
@@ -88,29 +94,29 @@ const spine = (pages = 320) => ({
                 <div class="pulled">
                   <BookCover book={d.book} color={d.spine ?? palette[i % palette.length]} class="pulled-cover" />
                   <div class="pulled-body">
-                    <p class="ui text-sm text-ink-soft">{t(`books.${d.status}`)}</p>
-                    <h3 class="display mt-1 text-3xl">{d.book.title}</h3>
-                    <p class="mt-1 text-ink-soft italic">
+                    <p class="pill">{t(`books.${d.status}`)}</p>
+                    <h3 class="display mt-4 text-[clamp(2rem,3.4vw,3rem)]">{d.book.title}</h3>
+                    <p class="display-serif mt-2 text-2xl text-muted">
                       {t("books.by")} {d.book.author}
                       {d.book.year && `, ${d.book.year}`}
                     </p>
                     {d.rating !== undefined && (
-                      <p class="ui mt-3 flex items-center gap-2 text-sm">
+                      <p class="mt-4 flex items-center gap-2 text-sm">
                         <Rating value={d.rating} label={t("books.rating")} />
                       </p>
                     )}
                     {d.takeaways.length > 0 && (
-                      <ul class="mt-4 list-disc space-y-1 pl-5 leading-relaxed">
+                      <ul class="mt-5 list-disc space-y-1.5 pl-5 leading-relaxed text-muted">
                         {d.takeaways.slice(0, 3).map((k) => (
                           <li>{k}</li>
                         ))}
                       </ul>
                     )}
-                    <div class="ui mt-6 flex flex-wrap items-center gap-5 text-sm">
-                      <a href={localePath(lang, `books/${entrySlug(entry.id)}`)} class="font-semibold text-ink">
+                    <div class="mt-8 flex flex-wrap items-center gap-3">
+                      <a href={localePath(lang, `books/${entrySlug(entry.id)}`)} class="btn btn-primary">
                         {t("books.open")}
                       </a>
-                      <button type="button" data-close class="text-ink-soft underline-offset-4 hover:underline">
+                      <button type="button" data-close class="btn btn-ghost">
                         {t("books.close")}
                       </button>
                     </div>
@@ -119,48 +125,82 @@ const spine = (pages = 320) => ({
               </template>
             );
           })}
-          <div class="detail mt-10" data-detail-slot aria-live="polite" />
+          <div class="detail mt-12" data-detail-slot aria-live="polite" />
         </>
       )
     }
-  </div>
+    </div>
+  </section>
 </Base>
 
 <style>
+  .shelf-page {
+    background:
+      radial-gradient(70% 50% at 50% 100%, rgb(255 255 255 / 0.05), transparent 70%),
+      var(--void);
+  }
   .filters {
     display: flex;
     gap: 0.4rem;
   }
-  .filters:not([hidden]) {
-    display: flex;
+  .filters[hidden] {
+    display: none;
   }
   .filters button {
-    padding: 0.35rem 0.8rem;
-    border: 1px solid var(--rule);
+    padding: 0.45rem 1rem;
+    border: 1px solid var(--line);
     border-radius: 999px;
     font-size: 0.85rem;
-    color: var(--ink-soft);
+    color: var(--muted);
     cursor: pointer;
+    transition:
+      color 0.2s,
+      border-color 0.2s;
+  }
+  .filters button:hover {
+    color: var(--fg);
   }
   .filters button[aria-pressed="true"] {
-    background: var(--ink);
-    border-color: var(--ink);
-    color: var(--paper);
+    background: var(--fg);
+    border-color: var(--fg);
+    color: var(--bg);
+  }
+  /* The shelf: spines stand on a thin lit edge, with light falling from above. */
+  .shelves {
+    display: grid;
+    gap: 3.5rem 3rem;
+  }
+  @media (min-width: 1024px) {
+    .shelves {
+      grid-template-columns: 1fr 1fr;
+    }
   }
   .shelf {
     list-style: none;
-    margin: 0.75rem 0 0;
-    padding: 0 0.75rem;
+    margin: 1rem 0 0;
+    padding: 28px 0.5rem 0;
     display: flex;
     align-items: flex-end;
-    gap: 4px;
-    min-height: 320px;
-    border-bottom: 12px solid var(--paper-raised);
-    box-shadow: 0 10px 0 -4px var(--rule);
-    perspective: 900px;
+    gap: 6px;
+    min-height: 340px;
+    position: relative;
+    perspective: 1000px;
     overflow-x: auto;
-    overflow-y: visible;
-    padding-top: 24px;
+    border-bottom: 1px solid rgb(255 255 255 / 0.55);
+  }
+  /* Light pooling on the shelf edge. */
+  .shelf-block {
+    position: relative;
+  }
+  .shelf-block::after {
+    content: "";
+    position: absolute;
+    left: 10%;
+    right: 10%;
+    bottom: -18px;
+    height: 36px;
+    background: radial-gradient(50% 50% at 50% 50%, rgb(255 255 255 / 0.1), transparent 70%);
+    pointer-events: none;
   }
   .spine {
     position: relative;
@@ -170,23 +210,28 @@ const spine = (pages = 320) => ({
     align-items: center;
     width: var(--w);
     height: var(--h);
-    padding: 0.9rem 0;
+    padding: 1rem 0 0.9rem;
     background:
-      linear-gradient(90deg, rgb(0 0 0 / 0.22), transparent 18%, transparent 82%, rgb(0 0 0 / 0.25)),
-      var(--cloth);
-    color: #f2f4f3;
-    border-radius: 2px 2px 0 0;
+      linear-gradient(180deg, rgb(255 255 255 / 0.16), transparent 30%),
+      linear-gradient(90deg, rgb(0 0 0 / 0.35), transparent 22%, transparent 78%, rgb(0 0 0 / 0.4)),
+      color-mix(in srgb, var(--cloth) 70%, #000);
+    color: #f4f4f2;
+    border-radius: 10px 10px 2px 2px;
     text-decoration: none;
     transform-origin: 50% 100%;
     transition:
-      transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1),
-      box-shadow 0.35s;
-    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.06);
+      transform 0.45s cubic-bezier(0.2, 0.7, 0.2, 1),
+      box-shadow 0.45s,
+      filter 0.45s;
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08);
+    filter: saturate(0.55);
   }
   /* Spines read top to bottom, as on most English-language books. */
   .spine-title {
     writing-mode: vertical-rl;
-    font-family: var(--font-serif);
+    font-family: var(--font-sans);
+    font-variation-settings: "wdth" 80;
+    font-weight: 500;
     font-size: 0.86rem;
     line-height: 1.15;
     max-height: calc(var(--h) - 5.5rem);
@@ -196,45 +241,52 @@ const spine = (pages = 320) => ({
   }
   .spine-author {
     writing-mode: vertical-rl;
-    font-size: 0.66rem;
-    opacity: 0.8;
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 0.78rem;
+    opacity: 0.75;
     white-space: nowrap;
-    max-height: 4rem;
+    max-height: 4.5rem;
     overflow: hidden;
   }
   .bookmark {
     position: absolute;
-    top: -14px;
+    top: -16px;
     left: 50%;
     width: 8px;
-    height: 26px;
+    height: 28px;
     margin-left: -4px;
     background: var(--signal);
+    box-shadow: 0 0 12px var(--signal);
     clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%);
   }
   .spine:hover,
   .spine:focus-visible,
   .spine[aria-expanded="true"] {
-    transform: translateY(-14px) rotateX(-8deg);
+    transform: translateY(-18px) rotateX(-6deg);
+    filter: saturate(1);
     box-shadow:
-      inset 0 0 0 1px rgb(255 255 255 / 0.12),
-      0 18px 22px -14px rgb(0 0 0 / 0.55);
+      inset 0 0 0 1px rgb(255 255 255 / 0.18),
+      0 24px 30px -18px rgb(255 255 255 / 0.25);
   }
   .shelf-block[hidden] {
     display: none;
   }
   .detail :global(.pulled) {
     display: grid;
-    gap: 2rem;
-    padding: 2rem 0;
-    border-top: 1px solid var(--rule);
+    gap: 2.5rem;
+    padding: 2rem;
+    border-radius: var(--radius-card);
+    background: var(--raised);
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08);
   }
   .detail :global(.pulled-cover) {
-    width: 11rem;
+    width: 12rem;
   }
   @media (min-width: 640px) {
     .detail :global(.pulled) {
-      grid-template-columns: 11rem minmax(0, 36rem);
+      grid-template-columns: 12rem minmax(0, 40rem);
+      padding: 2.5rem;
     }
   }
 </style>
@@ -269,10 +321,13 @@ const spine = (pages = 320) => ({
           gsap.from(slot.querySelector(".pulled-cover"), { y: -40, rotationY: -70, opacity: 0, transformPerspective: 800, transformOrigin: "0% 50%", duration: 0.6, ease: "power3.out" });
           gsap.from(slot.querySelector(".pulled-body"), { opacity: 0, x: 16, duration: 0.5, delay: 0.15 });
         }
-        slot.scrollIntoView({ block: "nearest", behavior: reducedMotion() ? "auto" : "smooth" });
+        // Only follow real clicks; the first book opens on load without moving the page.
+        if (e.isTrusted) slot.scrollIntoView({ block: "nearest", behavior: reducedMotion() ? "auto" : "smooth" });
       });
     }
   }
+
+  document.querySelector<HTMLAnchorElement>("[data-book]")?.dispatchEvent(new MouseEvent("click", { cancelable: true }));
 
   if (filters) {
     filters.hidden = false;
