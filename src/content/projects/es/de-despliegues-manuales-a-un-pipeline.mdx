@@ -1,0 +1,117 @@
+---
+title: "De despliegues manuales a un pipeline"
+subtitle: "Llevar todos los contenedores de un servidor EC2 a ECS en Fargate, y poner sobre rieles el camino del merge al servicio en marcha"
+summary: "Releases y servidores dependían de una persona. Llevé los contenedores de un solo EC2 a ECS en Fargate, con EFS y RDS, y automaticé cada despliegue."
+order: 3
+date: 2025-03-22
+period: "2025"
+role: "Contenedores y CI/CD"
+stack: ["Docker", "Amazon ECS", "AWS Fargate", "Amazon ECR", "Application Load Balancer", "ACM", "Amazon EFS", "Amazon RDS", "CloudWatch", "CI/CD"]
+outcomes:
+  - value: "Automatizado"
+    label: "del merge al despliegue"
+  - value: "Progresivo"
+    label: "despliegues sin caídas"
+translationKey: ecs-delivery
+---
+
+import Scrolly from "@/components/visual/Scrolly.astro";
+import Step from "@/components/visual/Step.astro";
+import ArchDiagram from "@/components/visual/ArchDiagram.astro";
+import { ecsBefore, ecsAfter, ecsDelivery } from "@/data/diagrams";
+import { ecsBeforeEs, ecsAfterEs, ecsDeliveryEs } from "@/data/diagrams.es";
+
+## Contexto
+
+La aplicación se desplegaba a mano, sin un proceso consistente, y cada release dependía de que yo tuviera tiempo para hacerla. Para la empresa, el problema no era solo la lentitud: toda la operación descansaba sobre una persona, y cada hora dedicada a desplegar o mantener servidores era una hora que no se dedicaba a construir producto.
+
+El objetivo era una plataforma que pudiera funcionar sin supervisión constante: un entorno de contenedores en ECS y un pipeline que llevara un commit hasta un servicio en ejecución.
+
+## Por qué ECS
+
+Al principio, por necesidades de negocio, la opción correcta era un solo EC2 con contenedores (ver el [pipeline de datos de Odoo](../reportes-que-nadie-tuvo-que-pedir/)), con Traefik como gateway para gestionar rutas y certificados. Pero los requerimientos no funcionales, sobre todo el mantenimiento, obligaron a pensar en una arquitectura más autosuficiente.
+
+Ahí entró **Amazon ECS** como la opción ganadora: un servicio maduro de AWS, con una API más simple que Kubernetes, sin coste del plano de control y probado por equipos de ingeniería de muchas empresas. Además, ECS ofrece el tipo de lanzamiento **Fargate**, donde AWS gestiona los recursos de cómputo subyacentes. Eso libera de tareas al equipo de tecnología a cambio de un coste adicional que la empresa estaba dispuesta a asumir, porque el equipo de operaciones es pequeño.
+
+## Cómo describe ECS una carga de trabajo
+
+En general, los orquestadores funcionan de manera similar: hay una carga de trabajo que queremos que gestione, una definición de esa carga y algo que la mantiene en marcha. ECS tiene un nombre para cada pieza.
+
+### Task definitions
+
+La definición dice cuántos recursos le vamos a asignar, qué almacenamiento va a usar, qué puertos deben estar abiertos, qué imagen de contenedor se usará, cómo se gestionarán los logs, etc. En Docker sería el fichero `docker-compose.yaml`; en Kubernetes, el manifiesto de un pod o de un deployment. En ECS se llaman **task definitions**: están escritas en JSON y el servicio las versiona automáticamente.
+
+### Servicios
+
+Con la carga de trabajo definida, necesitamos un software que haga de niñera: define cuántas unidades de esa carga queremos en ejecución, vuelve a encender la que se apague, y puede lanzar cargas programadas para los momentos de cómputo intensivo (en ECS, con ayuda de EventBridge Scheduler). En Docker Compose lo más cercano sería el parámetro `restart`, pero solo aplica a un contenedor; para trabajar como un servicio de múltiples contenedores hay que usar un servicio de Docker Swarm. En ECS es el **ECS service**.
+
+## La migración
+
+La mudanza ocurrió en tres partes: primero los datos salieron del servidor, luego AWS asumió el enrutamiento y los certificados, y solo entonces se movieron los contenedores.
+
+<Scrolly>
+  <ArchDiagram slot="stage" panel="before" diagram={ecsBefore} i18n={ecsBeforeEs} title="Antes: un servidor para todo" plate="Fig. 3.1" />
+  <ArchDiagram slot="stage" panel="after" diagram={ecsAfter} i18n={ecsAfterEs} title="Después: ECS en Fargate" plate="Fig. 3.2" caption="Toca o pasa el cursor sobre un componente para ver detalles." />
+
+  <Step panel="before" focus="users,traefik,apps">
+    **El punto de partida.** Una sola instancia EC2 ejecutaba todos los contenedores con Docker Compose. Delante estaba **Traefik** como gateway: descubría los servicios por etiquetas de Docker, enrutaba cada subdominio y renovaba por su cuenta los certificados de Let's Encrypt.
+  </Step>
+
+  <Step focus="apps,mysql,volume">
+    Lo que ataba los contenedores a esa máquina era su estado. Las bases de datos MySQL corrían en un contenedor junto a las apps, y los archivos vivían en el disco del servidor. Nada podía pasar a ECS hasta que ese estado viviera en otro sitio.
+  </Step>
+
+  <Step panel="after" focus="rds,efs" show="aws,rds,efs">
+    **Primero los datos.** Empecé asegurando que los contenedores no dependieran del almacenamiento del servidor. Los archivos pasaron a un punto de montaje en **Amazon EFS**, y las bases de datos a una instancia **RDS** cargada con un `mysqldump`.
+
+    Con los datos fuera de la máquina virtual, mover los contenedores solo necesitaba una ventana de servicio corta.
+  </Step>
+
+  <Step focus="users,alb,acm" show="users,alb,acm">
+    **Enrutamiento y certificados.** Los servicios nativos de AWS reemplazaron a Traefik. El **Application Load Balancer** enruta el tráfico mediante reglas en el listener HTTPS, en este caso por subdominio, hacia un target group por servicio. Lo que sustituye al autodescubrimiento de Traefik por etiquetas es la integración nativa con ECS: el servicio registra y desregistra automáticamente sus tareas en su target group.
+
+    **ACM** (AWS Certificate Manager) gestiona los certificados TLS y los renueva automáticamente, como hacía Traefik con Let's Encrypt. Un certificado wildcard cubre todos los subdominios con un solo certificado en el listener.
+  </Step>
+
+  <Step focus="ecs,tasks,ecr,cw" show="cluster,ecs,tasks,ecr,cw">
+    **Los contenedores.** Con el clúster creado, escribí las task definitions que reemplazaron los ficheros de Compose y desplegué cada servicio de **ECS** en **Fargate**, detrás del balanceador y con los logs yendo a CloudWatch.
+
+    Solo cuando un servicio estaba en marcha y su almacenamiento conectado (RDS o EFS), cambiaba hacia él el destino del balanceador.
+  </Step>
+</Scrolly>
+
+## Lo que salió mal
+
+Después de solucionar varios errores de permisos y de red con los servicios de almacenamiento, los contenedores quedaron totalmente migrados. Estos fueron algunos de los problemas que surgieron en el camino:
+
+- **Security groups.** Las tareas arrancaban, pero no podían montar EFS y fallaban por timeout al montar el sistema de archivos. Había configurado las reglas pensando en la instancia EC2 original, pero las tareas de Fargate tienen su propio security group. Faltaba permitir el tráfico NFS (puerto 2049) desde el security group de las tareas hacia EFS.
+- **Roles de IAM.** Al principio confundí el task execution role, que usa ECS para descargar la imagen de ECR, enviar logs y leer secretos, con el task role, que es el que usa la aplicación dentro del contenedor. Por eso la tarea no arrancaba: no podía descargar su imagen.
+- **Permisos en EFS.** El access point de EFS fuerza un usuario y grupo POSIX (UID/GID). Si no coinciden con el usuario con el que corre el contenedor, la aplicación falla al escribir con permission denied. Hay que revisar qué usuario usa la imagen antes de configurar el access point.
+
+La migración se dio por terminada cuando cada servicio respondía en su subdominio y todas las verificaciones de salud estaban en verde.
+
+## Del merge al servicio en marcha
+
+Con la plataforma lista, la otra mitad del objetivo era que las versiones nuevas llegaran a ella sin depender de mí.
+
+<Scrolly>
+  <ArchDiagram slot="stage" diagram={ecsDelivery} i18n={ecsDeliveryEs} title="Del merge al servicio en marcha" plate="Fig. 3.3" caption="Toca o pasa el cursor sobre un componente para ver detalles." />
+
+  <Step focus="users,alb,ecs" show="ecs,alb,users,cw">
+    El destino ya estaba listo: el servicio de **ECS** detrás del balanceador, con sus logs en CloudWatch. Faltaba una forma fiable de publicar en él.
+  </Step>
+
+  <Step focus="dev,ci" show="dev,ci">
+    Después el disparador. Un merge a la rama principal arranca el **pipeline**: construir la imagen y ejecutar las pruebas. Si las pruebas fallan, no se publica nada.
+  </Step>
+
+  <Step focus="ci,ecr,ecs" show="ecr">
+    Un build en verde sube la imagen al **registro** y la despliega en ECS con una actualización **progresiva**: las tareas nuevas tienen que pasar los health checks antes de que se detengan las viejas, así los usuarios nunca ven un hueco.
+  </Step>
+
+  <Step focus="dev,ci,ecr,ecs,alb,users">
+    La última pieza no era técnica: documenté el proceso para que el equipo pudiera operarlo y cambiarlo sin depender de mí.
+  </Step>
+</Scrolly>
+
+El mismo clúster terminó alojando más que esta app. Más adelante corrió la instancia de Metabase del [pipeline de datos de Odoo](../reportes-que-nadie-tuvo-que-pedir/).

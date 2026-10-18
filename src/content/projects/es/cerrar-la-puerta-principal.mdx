@@ -1,0 +1,42 @@
+---
+title: "Cerrar la puerta principal"
+subtitle: "Protección en el borde y reglas de red de mínimo privilegio, añadidas sin caídas"
+summary: "Cargas públicas con security groups permisivos y sin protección de aplicación. Añadí AWS WAF y ajusté las reglas de red sin interrumpir el servicio."
+order: 5
+date: 2025-09-18
+period: "2025"
+role: "Evaluación y hardening de seguridad cloud"
+stack: ["AWS WAF", "Security Groups", "Application Load Balancer", "VPC"]
+outcomes:
+  - value: "0"
+    label: "caídas durante el cambio"
+translationKey: edge-security
+---
+
+import Scrolly from "@/components/visual/Scrolly.astro";
+import Step from "@/components/visual/Step.astro";
+import ArchDiagram from "@/components/visual/ArchDiagram.astro";
+import { edgeSecurity } from "@/data/diagrams";
+import { edgeSecurityEs } from "@/data/diagrams.es";
+
+Las cargas públicas del cliente eran accesibles a través de reglas de red demasiado permisivas, sin protección en la capa de aplicación delante de ellas. Los patrones de ataque web más comunes y los puertos abiertos innecesarios eran un riesgo que nadie había decidido asumir. El trabajo era reducir esa exposición sin alterar el tráfico que ya estaba funcionando.
+
+<Scrolly>
+  <ArchDiagram slot="stage" diagram={edgeSecurity} i18n={edgeSecurityEs} title="El tráfico desde internet hacia dentro" plate="Fig. 5.1" caption="Toca o pasa el cursor sobre un componente para ver detalles." />
+
+  <Step focus="users,bots,alb,app">
+    El punto de partida: todo lo que llegaba al balanceador llegaba a los servicios, y los security groups permitían mucho más de lo que los servicios necesitaban.
+  </Step>
+
+  <Step focus="bots,waf,alb" show="waf">
+    Desplegué **AWS WAF** delante de los servicios públicos, con grupos de reglas gestionadas por AWS para los patrones de ataque comunes y reglas propias para el tráfico de esta aplicación.
+  </Step>
+
+  <Step focus="alb,app,db" show="sg">
+    Después, las reglas de red. Audité cada **security group**, quité las reglas de entrada más amplias de lo necesario y segmenté el acceso por servicio: los servicios solo aceptan tráfico del balanceador, y la base de datos solo de los servicios que la usan.
+  </Step>
+
+  <Step focus="users,waf,alb,app,db">
+    Por último, documenté la línea base resultante de red y borde para que se pudiera mantener, y para que el próximo cambio parta de un estado conocido.
+  </Step>
+</Scrolly>

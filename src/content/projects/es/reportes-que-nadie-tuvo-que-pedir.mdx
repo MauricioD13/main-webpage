@@ -1,0 +1,72 @@
+---
+title: "Reportes que nadie tuvo que pedir"
+subtitle: "Un pipeline serverless de Odoo a dashboards de autoservicio"
+summary: "Odoo tenía los datos pero no podía analizarlos. Un script en Lambda creció hasta un pipeline con Terraform: S3 por fecha, Athena y dashboards en Metabase."
+order: 4
+date: 2025-06-05
+period: "2025"
+role: "Ingeniería de datos"
+stack: ["Python", "Lambda", "EventBridge Scheduler", "SNS", "Parameter Store", "S3", "Athena", "ECS", "RDS", "Metabase", "Terraform", "GitHub Actions"]
+cover: ../../../assets/projects/odoo-data-pipeline/serverless_data_pipeline.png
+outcomes:
+  - value: "1"
+    label: "módulo de Terraform detrás de cada reporte"
+  - value: "Autoservicio"
+    label: "dashboards en lugar de correos con reportes"
+translationKey: odoo-data-pipeline
+---
+
+import Scrolly from "@/components/visual/Scrolly.astro";
+import Step from "@/components/visual/Step.astro";
+import ArchDiagram from "@/components/visual/ArchDiagram.astro";
+import Callout from "@/components/visual/Callout.astro";
+import { dataPipeline } from "@/data/diagrams";
+import { dataPipelineEs } from "@/data/diagrams.es";
+
+Odoo es un ERP sólido, con funciones para llevar casi todo un negocio, pero analizar datos no es una de ellas, sobre todo cuando las tablas crecen. Se podría decir que es injusto: hay módulos de la comunidad que añaden reportes. En la práctica, instalarlos es demasiado para el personal no técnico, y alguien tiene que mantenerlos. Es una carga pesada cuando el equipo técnico es pequeño y ya va justo, que era exactamente mi caso.
+
+Lo que sí tiene Odoo es una API JSON capaz de extraer los datos en bruto. Empecé a escribir scripts de Python contra ella para convertir los datos de facturación y ventas en reportes sencillos. Tras unas cuantas pruebas quedó claro que podían aportar valor real, así que me centré primero en algo útil para el equipo de ventas.
+
+<Scrolly>
+  <ArchDiagram slot="stage" diagram={dataPipeline} i18n={dataPipelineEs} title="De Odoo a los dashboards" plate="Fig. 4.1" caption="Toca o pasa el cursor sobre un componente para ver detalles." />
+
+  <Step focus="odoo,lambda,ssm" show="odoo,lambda,ssm">
+    **Reportes básicos.** Necesitaba un lugar donde ejecutar scripts cortos de forma programada y con el menor mantenimiento posible. Una función **Lambda** era la opción natural, con la API key de Odoo guardada en **Parameter Store**.
+  </Step>
+
+  <Step focus="schedule,lambda,sns" show="schedule,sns,team">
+    **Ampliarlo.** Si el primer reporte resultaba útil, el enfoque tenía que escalar. Escribí un **módulo de Terraform** que conecta una función Lambda, un tópico de **SNS** y una regla de **EventBridge Scheduler**: una plantilla repetible, no un script de un solo uso. Luego la repliqué para cada tabla de Odoo que valía la pena reportar, como cotizaciones pendientes y análisis de ventas.
+  </Step>
+
+  <Step focus="sns,team">
+    Después de varios, ajustados con los comentarios del equipo de ventas, dos cosas quedaron claras. Hay un límite de correos con reportes que la gente lee antes de empezar a ignorarlos. Y lo que el negocio necesitaba de verdad era un lugar para *explorar* los datos, no solo recibirlos.
+  </Step>
+
+  <Step focus="lambda,s3,athena" show="s3,athena">
+    **La plataforma.** Ahora las Lambdas procesan los datos extraídos, recortan los campos que nadie usa y los escriben en **S3**, particionados por fecha. **Athena** ejecuta SQL directamente sobre esos archivos, sin servidores que gestionar.
+  </Step>
+
+  <Step focus="athena,metabase,rds,team" show="metabase,rds">
+    Para la parte de las personas elegí **Metabase**: fácil de leer, dashboards de autoservicio, consultas flexibles y una versión gratuita autoalojada. Corre como contenedor en el clúster de **ECS** del [proyecto de entrega con ECS](../de-despliegues-manuales-a-un-pipeline/), con **RDS** para sus propios metadatos, y consulta S3 a través de Athena.
+  </Step>
+
+  <Step focus="ci,lambda" show="ci">
+    **Automatizar el despliegue.** Comprimir y subir código a mano no aguantó el número de funciones. Cada Lambda tiene su propio pipeline de **GitHub Actions**, que solo se ejecuta cuando cambia su directorio, así actualizar el reporte de ventas nunca vuelve a desplegar el de cotizaciones.
+  </Step>
+</Scrolly>
+
+## El pipeline, en orden
+
+1. Una función Lambda extrae los datos de Odoo.
+2. Los datos se procesan y se quitan los campos innecesarios.
+3. Se suben a S3, particionados por fecha.
+4. Metabase consulta los datos de S3 a través de Athena.
+5. La capa de BI de Metabase convierte las filas en bruto en algo que la gente puede explorar.
+
+## Lo que cambió
+
+Ahora el negocio puede cruzar sus datos con libertad, ejecutando SQL complejo sobre todo el conjunto, y la plataforma de autoservicio hace que ese poder no dependa de mí.
+
+<Callout>
+  Es un patrón que veo a menudo: los reportes "suficientes" que vienen con un sistema dejan de serlo en cuanto la gente empieza a usar de verdad sus datos.
+</Callout>

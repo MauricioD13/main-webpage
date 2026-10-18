@@ -1,0 +1,101 @@
+---
+title: "Bajo ataque, y luego tres capas"
+subtitle: "Un escaneo de puertos tumbó un monolito, y la reconstrucción se convirtió en mi primer proyecto con Terraform"
+summary: "Un escaneo tumbaba un servidor Laravel. Frené el ataque y lo reconstruí como instancias sin estado detrás de un balanceador, con RDS, S3 y Terraform."
+order: 2
+date: 2024-08-30
+period: "2024"
+role: "Administración cloud e infraestructura como código, freelance"
+stack: ["EC2", "Auto Scaling", "Application Load Balancer", "RDS MySQL", "S3", "CloudWatch", "SNS", "Terraform", "Checkov"]
+cover: ../../../assets/projects/under-attack-three-tiers/aws-three-tier-arch.jpg
+outcomes:
+  - value: "2+"
+    label: "instancias detrás del balanceador, nunca una"
+  - value: "50 %"
+    label: "mínimo sano durante el refresh progresivo"
+  - value: "30 días"
+    label: "de backups automáticos de la base de datos"
+translationKey: under-attack-three-tiers
+---
+
+import Scrolly from "@/components/visual/Scrolly.astro";
+import Step from "@/components/visual/Step.astro";
+import ArchDiagram from "@/components/visual/ArchDiagram.astro";
+import Callout from "@/components/visual/Callout.astro";
+import { singleServer, threeTier } from "@/data/diagrams";
+import { singleServerEs, threeTierEs } from "@/data/diagrams.es";
+
+Que un servidor se caiga de golpe es la pesadilla de cualquier desarrollador, y así empieza esta historia. Una tarde el servidor se cayó sin aviso. Tenía Nginx como proxy inverso delante de un backend en PHP con Laravel, una configuración que hasta entonces había sido estable.
+
+<Scrolly>
+  <ArchDiagram slot="stage" panel="before" diagram={singleServer} i18n={singleServerEs} title="Antes: un servidor, un blanco" plate="Fig. 2.1" />
+  <ArchDiagram slot="stage" panel="after" diagram={threeTier} i18n={threeTierEs} title="Después: tres capas" plate="Fig. 2.2" caption="Toca o pasa el cursor sobre un componente para ver detalles." />
+
+  <Step panel="before" focus="scanner,ec2">
+    Los logs de Nginx tenían la respuesta: el servidor estaba bajo ataque. Tráfico desde un único origen hacía escaneo de puertos y fuzzing de subdominios por fuerza bruta. El volumen por sí solo saturaba la instancia y la tumbaba, una y otra vez.
+  </Step>
+
+  <Step focus="scanner,ec2,users">
+    Primero, frenar el daño. Cambié los security groups para bloquear las direcciones maliciosas y cerré un puerto abierto por encima del 6000 después de comprobar qué servicio lo usaba. El servidor se estabilizó, pero era un parche, no una solución.
+  </Step>
+
+  <Step focus="ec2,cw,sns" show="cw,sns">
+    Para que la próxima vez nos enteráramos antes que los usuarios: una **alarma de CloudWatch** sobre la CPU de la instancia, conectada a **SNS** para que el equipo recibiera el aviso al instante.
+  </Step>
+
+  <Step panel="after" focus="alb,app1,app2" show="aws,vpc,public,app,asg,alb,app1,app2">
+    El ataque dejó claro lo frágil que era una única instancia monolítica. La app también daba servicio a un cliente móvil por websockets. En lugar de una gran refactorización, desacoplé solo lo necesario para que el servidor fuera **sin estado**, de modo que las instancias pudieran ir y venir detrás de un **balanceador**.
+  </Step>
+
+  <Step focus="rds,s3,app2" show="data,rds,s3,users">
+    Quitar el estado significaba sacarlo del servidor. La base de datos MySQL pasó a **Amazon RDS**. Las imágenes de usuarios y demás archivos estáticos pasaron a **S3**. A partir de ahí, cualquier instancia podía atender cualquier petición.
+  </Step>
+
+  <Step focus="ami,app2" show="ami">
+    El **grupo de Auto Scaling** lanza instancias desde una plantilla que apunta a una **AMI**. Construí esa AMI desde una instancia conectada a RDS, con los procedimientos de MySQL configurados y los datos cargados. Las versiones nuevas siguen el mismo camino: AMI nueva, nueva versión del launch template, instance refresh.
+  </Step>
+
+  <Step focus="rds,cw" show="cw">
+    La base de datos tiene cifrado con KMS, almacenamiento con autoescalado, logs en CloudWatch, monitoreo mejorado, backups automáticos de 30 días y una ventana de mantenimiento en las horas tranquilas.
+  </Step>
+</Scrolly>
+
+## Terraform, a propósito
+
+Una mejora a dos capas habría sido la opción directa. Vi el incidente como una oportunidad para aprender bien **infraestructura como código**, incluso en un proyecto freelance. Poder desplegar y destruir todo el entorno cuando haga falta lo mantiene limpio y revisable.
+
+El estado vive en un **backend en S3**, así que se guarda en remoto y de forma consistente para cualquiera que trabaje en él. Validé la configuración desplegando primero los cimientos: VPC, subredes y security groups.
+
+También añadí **Checkov** para escanear el plan en busca de errores de seguridad y cumplimiento antes de que nada llegara a AWS:
+
+```bash
+python3 -m venv .env
+source .env/bin/activate
+pip3 install checkov
+```
+
+```bash
+#!/bin/bash
+terraform plan -out tf.plan
+terraform show -json tf.plan | jq > tf.json
+checkov -f tf.json
+```
+
+<Callout>
+  El equipo todavía no tenía prácticas DevOps. Checkov fue una prueba de concepto, una forma pequeña de mostrar cómo podría ser el proceso más adelante.
+</Callout>
+
+## Cómo se publica una versión nueva
+
+1. El equipo de desarrollo crea una AMI nueva desde el servidor de staging cuando las funcionalidades están listas.
+2. La AMI nueva entra en el launch template, que crea una nueva versión de la plantilla.
+3. Un instance refresh, desde la consola o la CLI, reemplaza las instancias con una estrategia **progresiva** que mantiene al menos un 50 % sano en todo momento.
+
+Sin caídas, y la capacidad sigue a la demanda mediante target tracking sobre la CPU media.
+
+## Lo que haría después
+
+- **Seguridad:** AWS WAF delante del balanceador, AWS Shield contra DDoS y MFA en todas las cuentas.
+- **Automatización:** un pipeline de CI/CD para los despliegues y Terraform cubriendo todos los componentes.
+- **Observabilidad:** logs centralizados y trazas de peticiones con AWS X-Ray.
+- **Costos:** capacidad reservada para la base y revisiones periódicas de tamaño.
