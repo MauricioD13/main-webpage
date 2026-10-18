@@ -1,8 +1,8 @@
-# Tech Histories
+# Mauricio Cuello: personal site
 
-Personal site of Mauricio Cuello: cloud projects told as book chapters with interactive diagrams, short stories, and a bookshelf of tech and business reading. English and Spanish.
+What I'm good at, cloud projects told end to end with interactive and 3D architecture diagrams, short stories, and a bookshelf of tech and business reading. English and Spanish.
 
-Astro 7 (static) · Tailwind CSS 4 · MDX · GSAP + ScrollTrigger + Lenis · deployed as static assets on Cloudflare Workers.
+Astro 7 (static), Tailwind CSS 4, MDX, GSAP + ScrollTrigger + Lenis, React Three Fiber + drei islands, deployed as static assets on Cloudflare Workers. Design decisions live in `docs/ddr/`.
 
 ## Commands
 
@@ -23,15 +23,15 @@ Every entry lives at `src/content/<collection>/<lang>/<slug>.md(x)`. The same pi
 
 | Collection | Folder | Notes |
 |---|---|---|
-| Chapters (projects) | `src/content/chapters/` | `chapter` sets the order and the roman numeral. MDX. |
+| Projects | `src/content/projects/` | `order` sets the position on the projects list. MDX. |
 | Stories (short posts) | `src/content/stories/` | Markdown is enough. |
 | Books | `src/content/books/` | `status: reading` shows on the home page nightstand. The four current entries are **examples with `draft: true`**: replace the notes with your own and set `draft: false`. |
 
 Schemas: `src/content.config.ts`. UI strings for both languages: `src/i18n/ui.ts`.
 
-## Interactive plates in a chapter
+## Interactive plates in a project
 
-Diagram data lives in `src/data/diagrams.ts` (Spanish labels in `diagrams.es.ts`). A chapter tells its story with steps that drive the plate:
+Diagram data lives in `src/data/diagrams.ts` (Spanish labels in `diagrams.es.ts`). A project tells its story with steps that drive the plate:
 
 ```mdx
 import Scrolly from "@/components/visual/Scrolly.astro";
@@ -47,14 +47,17 @@ import { dataPipeline } from "@/data/diagrams";
 </Scrolly>
 ```
 
+- **One `<Step>` = one passage.** Everything inside a `<Step>` is read together while the diagram holds one state; the next `<Step>` changes the diagram. Put several paragraphs, a list or a code block in one step when an idea needs more room, and split into more steps when you want the diagram to change more often. Text outside `<Scrolly>` is a normal full-width reading column, so use `<Scrolly>` only for the parts that walk through the architecture.
 - `show`: ids hidden until this step (nodes, groups, or `from-to` edges; an edge appears with both of its nodes).
 - `focus`: ids lit in full colour, with traffic animating along the edges between them.
 - Several plates can share a stage: give each a `panel="name"` and switch with `<Step panel="name">`.
 - Also available: `<Chart type="bar|line" data={[…]} />`, `<StatRow>` + `<StatCounter value={64} suffix="%" label="…" />`, `<Callout>`.
 - AWS icon keys are in `src/components/visual/icons.ts`; non-AWS nodes use `glyph: "GH"`.
-- Adding a plate to `chapterPlates` shows it as the preview on the table of contents.
+- Adding a plate to `projectPlates` shows it as line-art on the project's card.
+- Every interactive plate gets an "Explore in 3D" button: the same diagram as exploded layers you can orbit.
+- Home page capabilities live in `src/data/capabilities.ts`, each linked to the projects that prove it.
 
-Everything is readable without JavaScript and with reduced motion: plates render complete, and the home page book shows as a static spread.
+Everything is readable without JavaScript and with reduced motion: plates render complete, and the 3D scenes fall back to static content or still frames.
 
 ## Dev helper
 
