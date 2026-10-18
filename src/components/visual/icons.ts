@@ -1,5 +1,5 @@
 // Official AWS architecture icons, rendered to static SVG at build time.
-// Keys are what chapter authors write in diagram data (e.g. icon: "lambda").
+// Keys are what project authors write in diagram data (e.g. icon: "lambda").
 import ec2 from "aws-react-icons/lib/icons/ArchitectureServiceAmazonEC2";
 import s3 from "aws-react-icons/lib/icons/ArchitectureServiceAmazonSimpleStorageService";
 import lambda from "aws-react-icons/lib/icons/ArchitectureServiceAWSLambda";
@@ -26,6 +26,9 @@ import glue from "aws-react-icons/lib/icons/ArchitectureServiceAWSGlue";
 import igw from "aws-react-icons/lib/icons/ResourceAmazonVPCInternetGateway";
 import alb from "aws-react-icons/lib/icons/ResourceElasticLoadBalancingApplicationLoadBalancer";
 import client from "aws-react-icons/lib/icons/ResourceClient";
+import efs from "aws-react-icons/lib/icons/ArchitectureServiceAmazonEFS";
+import acm from "aws-react-icons/lib/icons/ArchitectureServiceAWSCertificateManager";
+import fargate from "aws-react-icons/lib/icons/ArchitectureServiceAWSFargate";
 
 export const awsIcons = {
   ec2,
@@ -54,6 +57,9 @@ export const awsIcons = {
   igw,
   alb,
   client,
+  efs,
+  acm,
+  fargate,
 } as const;
 
 export type AwsIconKey = keyof typeof awsIcons;

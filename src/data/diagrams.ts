@@ -1,9 +1,9 @@
-// Architecture plates for the chapters. Kept outside the MDX so the table of contents can
-// show a miniature of each chapter's main plate. Coordinates are in viewBox units;
+// Architecture plates for the projects. Kept outside the MDX so project cards and the
+// 3D view can reuse each project's main plate. Coordinates are in viewBox units;
 // node x/y is the icon centre.
 import type { Diagram } from "../components/visual/types";
 
-/** Chapter 1: a single Magento server, its cron backups and the bucket in the wrong account. */
+/** Backup disk: a single Magento server, its cron backups and the bucket in the wrong account. */
 export const backupDisk: Diagram = {
   width: 790,
   height: 470,
@@ -39,7 +39,7 @@ export const backupDisk: Diagram = {
   ],
 };
 
-/** Chapter 2, before: one server taking the scan traffic. */
+/** Three tiers, before: one server taking the scan traffic. */
 export const singleServer: Diagram = {
   width: 660,
   height: 360,
@@ -59,7 +59,7 @@ export const singleServer: Diagram = {
   ],
 };
 
-/** Chapter 2, after: stateless instances behind a load balancer. */
+/** Three tiers, after: stateless instances behind a load balancer. */
 export const threeTier: Diagram = {
   width: 780,
   height: 530,
@@ -92,7 +92,70 @@ export const threeTier: Diagram = {
   ],
 };
 
-/** Chapter 3: from commit to a running container. */
+/** ECS migration, before: every container on one EC2 host, Traefik in front. */
+export const ecsBefore: Diagram = {
+  width: 790,
+  height: 400,
+  groups: [
+    { id: "aws", label: "AWS", x: 236, y: 24, w: 534, h: 352, kind: "cloud" },
+    { id: "host", label: "One EC2 instance, Docker Compose", x: 256, y: 56, w: 494, h: 296, kind: "zone" },
+  ],
+  nodes: [
+    { id: "users", label: "Users", icon: "client", x: 70, y: 150 },
+    { id: "le", label: "Let's Encrypt", glyph: "LE", x: 70, y: 300 },
+    {
+      id: "traefik",
+      label: "Traefik gateway",
+      glyph: "TR",
+      x: 340,
+      y: 150,
+      note: "Found services through Docker labels, routed each subdomain and renewed the certificates.",
+    },
+    { id: "apps", label: "App containers", glyph: "app", x: 510, y: 150 },
+    { id: "mysql", label: "MySQL container", glyph: "SQL", x: 670, y: 150, note: "The databases ran next to the apps, on the same machine." },
+    { id: "volume", label: "Files on the host disk", glyph: "disk", x: 510, y: 290, note: "Containers wrote to the instance's own disk, which tied them to it." },
+  ],
+  edges: [
+    { from: "users", to: "traefik", label: "HTTPS" },
+    { from: "le", to: "traefik", label: "certs", dashed: true },
+    { from: "traefik", to: "apps", label: "labels" },
+    { from: "apps", to: "mysql" },
+    { from: "apps", to: "volume", label: "files" },
+  ],
+};
+
+/** ECS migration, after: ALB + ACM in front, services on Fargate, state in RDS and EFS. */
+export const ecsAfter: Diagram = {
+  width: 820,
+  height: 520,
+  groups: [
+    { id: "aws", label: "AWS", x: 214, y: 20, w: 586, h: 480, kind: "cloud" },
+    { id: "cluster", label: "ECS cluster on Fargate", x: 440, y: 60, w: 160, h: 290, kind: "zone" },
+  ],
+  nodes: [
+    { id: "users", label: "Users", icon: "client", x: 70, y: 130 },
+    { id: "alb", label: "Load balancer", icon: "alb", x: 320, y: 130, note: "HTTPS listener rules send each subdomain to its service's target group." },
+    { id: "acm", label: "ACM wildcard cert", icon: "acm", x: 320, y: 270, note: "One certificate for every subdomain, renewed by AWS." },
+    { id: "ecs", label: "ECS services", icon: "ecs", x: 520, y: 130, note: "Keep the desired number of tasks running and register them in their target group." },
+    { id: "tasks", label: "Fargate tasks", icon: "fargate", x: 520, y: 270, note: "Started from versioned task definitions; AWS manages the servers underneath." },
+    { id: "ecr", label: "ECR images", icon: "ecr", x: 720, y: 130 },
+    { id: "cw", label: "CloudWatch logs", icon: "cloudwatch", x: 720, y: 270 },
+    { id: "rds", label: "RDS MySQL", icon: "rds", x: 430, y: 440, note: "Loaded from a mysqldump of the old container's databases." },
+    { id: "efs", label: "EFS files", icon: "efs", x: 610, y: 440, note: "Mounted over NFS (port 2049); the access point enforces a POSIX user and group." },
+  ],
+  edges: [
+    { from: "users", to: "alb", label: "HTTPS" },
+    { from: "acm", to: "alb", label: "TLS", dashed: true },
+    { from: "alb", to: "ecs", label: "by subdomain" },
+    { from: "ecr", to: "ecs", label: "image" },
+    { from: "ecs", to: "tasks", label: "runs" },
+    { from: "tasks", to: "cw", label: "logs" },
+    { from: "tasks", to: "rds", via: [[520, 378], [430, 378]] },
+    { from: "tasks", to: "efs", via: [[520, 378], [610, 378]] },
+  ],
+};
+
+/** ECS delivery: from commit to a running container. */
 export const ecsDelivery: Diagram = {
   width: 760,
   height: 330,
@@ -116,7 +179,7 @@ export const ecsDelivery: Diagram = {
   ],
 };
 
-/** Chapter 4: Odoo → Lambda → S3 → Athena → Metabase. */
+/** Data pipeline: Odoo → Lambda → S3 → Athena → Metabase. */
 export const dataPipeline: Diagram = {
   width: 830,
   height: 490,
@@ -130,7 +193,7 @@ export const dataPipeline: Diagram = {
     { id: "s3", label: "S3 by date", icon: "s3", x: 420, y: 240, note: "Parsed, trimmed rows, partitioned by date." },
     { id: "ci", label: "GitHub Actions", glyph: "GH", x: 420, y: 385, note: "One pipeline per function, triggered only by changes in its own directory." },
     { id: "athena", label: "Athena", icon: "athena", x: 580, y: 240, note: "Serverless SQL straight over the S3 data." },
-    { id: "metabase", label: "Metabase on ECS", icon: "ecs", x: 735, y: 240, note: "Self-hosted, on the ECS cluster from the previous chapter." },
+    { id: "metabase", label: "Metabase on ECS", icon: "ecs", x: 735, y: 240, note: "Self-hosted, on the ECS cluster from the ECS delivery project." },
     { id: "rds", label: "Metabase metadata", icon: "rds", x: 735, y: 385 },
     { id: "team", label: "Sales team", icon: "client", x: 735, y: 100 },
   ],
@@ -149,7 +212,7 @@ export const dataPipeline: Diagram = {
   ],
 };
 
-/** Chapter 5: edge protection and least-privilege network rules. */
+/** Edge security: edge protection and least-privilege network rules. */
 export const edgeSecurity: Diagram = {
   width: 760,
   height: 320,
@@ -174,7 +237,7 @@ export const edgeSecurity: Diagram = {
   ],
 };
 
-export const chapterPlates = {
+export const projectPlates = {
   "backup-that-filled-the-disk": backupDisk,
   "under-attack-three-tiers": threeTier,
   "ecs-delivery": ecsDelivery,

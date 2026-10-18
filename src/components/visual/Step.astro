@@ -1,5 +1,5 @@
 ---
-// One beat of a chapter's story. While it sits in the reading zone, the plate on the
+// One beat of a project's story. While it sits in the reading zone, the plate on the
 // stage reveals `show`, highlights `focus`, and switches to `panel` if given.
 interface Props {
   /** Comma-separated element ids (nodes, groups, or "from-to" edges) revealed at this step. */
@@ -13,12 +13,16 @@ const { show = "", focus = "", panel } = Astro.props;
 ---
 
 <div class="step" data-step data-show={show} data-focus={focus} data-panel-target={panel}>
-  <div class="step-body prose-book">
+  <div class="step-body prose-site">
     <slot />
   </div>
 </div>
 
 <style>
+  /*
+   * Reading first: each step is one passage of the article. Steps sit close together,
+   * neighbours stay readable, and the active one is marked with an amber rule.
+   */
   .step {
     padding: 1.5rem 0;
   }
@@ -29,30 +33,38 @@ const { show = "", focus = "", panel } = Astro.props;
     margin-bottom: 0;
   }
   :global([data-scrolly].is-live) .step {
-    min-height: 62vh;
+    min-height: 42vh;
     display: flex;
     align-items: center;
   }
   :global([data-scrolly].is-live) .step-body {
-    transition: opacity 0.4s ease;
-    opacity: 0.32;
+    padding-left: 1.25rem;
+    box-shadow: inset 2px 0 0 var(--line);
+    transition:
+      opacity 0.4s ease,
+      box-shadow 0.4s ease;
+    opacity: 0.55;
   }
   :global([data-scrolly].is-live) .step.is-active .step-body {
     opacity: 1;
+    box-shadow: inset 2px 0 0 var(--signal);
   }
+  /* The first passage starts right where the intro ends instead of mid-block. */
   .step:first-child {
     padding-top: 0;
   }
+  :global([data-scrolly].is-live) .step:first-child {
+    align-items: flex-start;
+  }
   @media (max-width: 1023px) {
     :global([data-scrolly].is-live) .step {
-      min-height: 70vh;
+      min-height: 50vh;
       align-items: flex-start;
     }
     :global([data-scrolly].is-live) .step-body {
-      background: var(--paper);
-      padding: 1rem 1.1rem;
-      border: 1px solid var(--rule);
-      border-radius: 4px;
+      background: var(--bg);
+      padding: 1rem 1.1rem 1rem 1.25rem;
+      border-radius: 6px;
       position: relative;
       z-index: 2;
     }

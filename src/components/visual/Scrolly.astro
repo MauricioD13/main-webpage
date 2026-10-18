@@ -30,7 +30,7 @@ const { flip = false } = Astro.props;
     position: sticky;
     top: 3.75rem;
     z-index: 1;
-    background: var(--paper);
+    background: var(--bg);
     padding-bottom: 0.75rem;
   }
   .stage-inner {
@@ -48,20 +48,30 @@ const { flip = false } = Astro.props;
     opacity: 0;
     visibility: hidden;
   }
+  /* On small screens the pinned diagram is a compact band so the text keeps the screen. */
   @media (max-width: 1023px) {
     .stage-inner :global(.plate-svg),
     .stage-inner :global(.chart-svg) {
-      max-height: 40vh;
+      max-height: 28vh;
+    }
+    .stage-inner :global(figcaption) {
+      display: none;
     }
   }
   @media (min-width: 1024px) {
+    /* Text gets about half the width (36rem max keeps lines readable); the plate fits the rest. */
     .scrolly {
-      grid-template-columns: minmax(0, 24rem) minmax(0, 1fr);
+      grid-template-columns: minmax(0, 36rem) minmax(0, 1fr);
       gap: 3.5rem;
       align-items: start;
     }
     .scrolly.flip {
-      grid-template-columns: minmax(0, 1fr) minmax(0, 24rem);
+      grid-template-columns: minmax(0, 1fr) minmax(0, 36rem);
+    }
+    /* The whole plate always fits on screen next to the text. */
+    .stage-inner :global(.plate-svg),
+    .stage-inner :global(.chart-svg) {
+      max-height: calc(100vh - 13rem);
     }
     .scrolly.flip .scrolly-stage {
       order: -1;
@@ -71,13 +81,13 @@ const { flip = false } = Astro.props;
       top: 4.5rem;
       background: transparent;
     }
-    /* With JS the stage is pinned and vertically centred while the steps scroll. */
+    /* With JS the stage is pinned just under the header, level with the text it explains. */
     :global(.scrolly.is-live) .scrolly-stage {
       top: 0;
       height: 100vh;
       display: flex;
-      align-items: center;
-      padding: 4.5rem 0 2rem;
+      align-items: flex-start;
+      padding: 5.5rem 0 2rem;
     }
     .stage-inner {
       width: 100%;

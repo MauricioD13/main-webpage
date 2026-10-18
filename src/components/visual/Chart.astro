@@ -51,8 +51,8 @@ const labelEvery = Math.ceil(n / 8);
 const uid = `c-${Math.random().toString(36).slice(2, 8)}`;
 ---
 
-<figure class="plate blueprint chart" data-chart data-panel={panel} data-type={type} data-values={JSON.stringify(data.map((d) => d.value))} data-labels={JSON.stringify(data.map((d) => d.label))} data-unit={unit}>
-  <div class="plate-head ui">
+<figure class="plate chart" data-chart data-panel={panel} data-type={type} data-values={JSON.stringify(data.map((d) => d.value))} data-labels={JSON.stringify(data.map((d) => d.label))} data-unit={unit}>
+  <div class="plate-head">
     <span>{title}</span>
     {plate !== undefined && <span class="plate-no">{plate}</span>}
   </div>
@@ -106,10 +106,10 @@ const uid = `c-${Math.random().toString(36).slice(2, 8)}`;
     }
     <line class="cross" x1="0" x2="0" y1={pad.t} y2={pad.t + ih} opacity="0"></line>
   </svg>
-  <div class="readout ui" aria-hidden="true" hidden></div>
+  <div class="readout" aria-hidden="true" hidden></div>
   {
     (seriesLabel || compareLabel) && (
-      <div class="legend ui">
+      <div class="legend">
         {seriesLabel && (
           <span>
             <i class="key key-series" />
@@ -125,7 +125,7 @@ const uid = `c-${Math.random().toString(36).slice(2, 8)}`;
       </div>
     )
   }
-  {caption && <figcaption class="ui">{caption}</figcaption>}
+  {caption && <figcaption>{caption}</figcaption>}
   <table class="sr-only">
     <caption>{title}</caption>
     <thead>
@@ -212,11 +212,11 @@ const uid = `c-${Math.random().toString(36).slice(2, 8)}`;
   }
   .readout {
     position: absolute;
-    top: 2.6rem;
-    right: 1.2rem;
+    top: 2.8rem;
+    right: 1.4rem;
     font-size: 0.82rem;
-    padding: 0.3rem 0.55rem;
-    background: rgb(14 35 66 / 0.85);
+    padding: 0.3rem 0.6rem;
+    background: rgb(20 20 20 / 0.9);
     border-left: 3px solid var(--signal);
     border-radius: 2px;
     font-variant-numeric: tabular-nums;

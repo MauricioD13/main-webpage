@@ -1,9 +1,14 @@
 ---
-// A data-driven architecture "plate": white-on-Prussian blueprint with official AWS icons.
+// A data-driven architecture "plate": glowing line-art on black with official AWS icons,
+// plus an on-demand 3D exploded view (Plate3D island).
 // Standalone it draws itself in when scrolled into view; inside <Scrolly> its steps decide
 // which components are shown and which are in focus (see Scrolly.astro).
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import Plate3D from "../three/Plate3D";
 import { awsIcons } from "./icons";
 import { edgeId, type Diagram, type DiagramI18n } from "./types";
+import { getLangFromUrl, useTranslations } from "../../i18n/utils";
 
 interface Props {
   diagram: Diagram;
@@ -26,6 +31,17 @@ const height = diagram.height;
 const nodes = diagram.nodes.map((n) => ({ ...n, ...i18n[n.id] }));
 const groups = (diagram.groups ?? []).map((g) => ({ ...g, ...i18n[g.id] }));
 const edges = diagram.edges.map((e) => ({ ...e, label: i18n[edgeId(e)]?.label ?? e.label }));
+const t = useTranslations(getLangFromUrl(Astro.url));
+
+// The 3D view gets the same (translated) diagram, with icons pre-rendered to SVG data URIs.
+const localized: Diagram = { width, height, nodes, edges, groups };
+const iconUris = interactive
+  ? Object.fromEntries(
+      nodes
+        .filter((n) => n.icon)
+        .map((n) => [n.id, `data:image/svg+xml;charset=utf-8,${encodeURIComponent(renderToStaticMarkup(createElement(awsIcons[n.icon!], { size: 256 })))}`]),
+    )
+  : {};
 const DEFAULT = 52;
 const byId = new Map(nodes.map((n) => [n.id, n]));
 const uid = `d-${Math.random().toString(36).slice(2, 8)}`;
@@ -93,11 +109,23 @@ const description = `${title}. Components: ${nodes.map((n) => n.label).join(", "
   .join("; ")}.`;
 ---
 
-<figure class="plate blueprint" data-diagram={interactive ? "" : undefined} data-panel={panel} aria-hidden={interactive ? undefined : "true"}>
-  <div class="plate-head ui">
-    <span>{title}</span>
-    {plate !== undefined && <span class="plate-no">{plate}</span>}
-  </div>
+<figure class="plate" data-diagram={interactive ? "" : undefined} data-panel={panel} aria-hidden={interactive ? undefined : "true"}>
+  {
+    interactive && (
+      <div class="plate-head">
+        <span>
+          {plate !== undefined && <span class="plate-no">{plate}</span>} {title}
+        </span>
+        <Plate3D
+          client:visible
+          diagram={localized}
+          icons={iconUris}
+          title={title}
+          labels={{ open: t("plate.open3d"), close: t("plate.close3d"), layers: t("plate.layers"), help: t("plate.help3d"), loading: t("plate.loading3d") }}
+        />
+      </div>
+    )
+  }
   <svg
     viewBox={`0 0 ${width} ${height}`}
     role="img"
@@ -186,8 +214,8 @@ const description = `${title}. Components: ${nodes.map((n) => n.label).join(", "
       })
     }
   </svg>
-  {caption && <figcaption class="ui">{caption}</figcaption>}
-  <div class="d-tip ui" role="status" aria-live="polite" hidden></div>
+  {caption && <figcaption>{caption}</figcaption>}
+  <div class="d-tip" role="status" aria-live="polite" hidden></div>
 </figure>
 
 <style>

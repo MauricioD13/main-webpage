@@ -14,7 +14,7 @@ const { value, label, prefix = "", suffix = "", decimals = 0 } = Astro.props;
   <span class="stat-value display" data-count={value} data-decimals={decimals}>
     {prefix}<span class="num">{value.toFixed(decimals)}</span>{suffix}
   </span>
-  <span class="stat-label ui">{label}</span>
+  <span class="stat-label">{label}</span>
 </div>
 
 <style>
@@ -23,7 +23,7 @@ const { value, label, prefix = "", suffix = "", decimals = 0 } = Astro.props;
     flex-direction: column;
     gap: 0.35rem;
     padding-top: 0.8rem;
-    border-top: 2px solid var(--ink);
+    border-top: 2px solid var(--fg);
   }
   .stat-value {
     font-size: clamp(2.4rem, 5vw, 3.4rem);
@@ -31,7 +31,7 @@ const { value, label, prefix = "", suffix = "", decimals = 0 } = Astro.props;
   }
   .stat-label {
     font-size: 0.86rem;
-    color: var(--ink-soft);
+    color: var(--muted);
     line-height: 1.35;
   }
 </style>
