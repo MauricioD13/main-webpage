@@ -14,7 +14,7 @@ spine: "#2f5d50"
 takeaways:
   - "Error budgets turn reliability into a shared decision instead of an argument."
   - "Toil is work that scales linearly with the service; automate it away."
-relatedChapters:
+relatedProjects:
   - en/under-attack-three-tiers
 translationKey: site-reliability-engineering
 ---
