@@ -11,14 +11,14 @@ Over the past few months I've been digging deeper into AWS cost optimization, st
 
 ## Cloud Intelligence Dashboards
 
-They give granular insight into cost and usage, so you can track KPIs, spot optimization opportunities and align FinOps practices. The Cost Intelligence Dashboard, CUDOS and the Compute Optimizer Dashboard make it easy to see cost per environment, track Savings Plans and catch anomalies.
+They give granular insight into cost and usage, so you can track KPIs, spot optimization opportunities and align FinOps practices. The Cost Intelligence Dashboard, CUDOS and the Compute Optimizer Dashboard show cost per environment, Savings Plans coverage and anomalies.
 
-My favorite feature: tracking Graviton opportunities and right-sizing recommendations as they appear.
+The part I found most useful: they list Graviton opportunities and right-sizing recommendations as they appear.
 
 ## Storage
 
 - **Amazon EBS:** right-size volumes, move from io1/io2 to gp3, and use Elastic Volumes.
-- **Amazon S3:** use S3 Storage Lens and lifecycle policies to move data to the cheapest class that still fits, such as Glacier Instant Retrieval. That can cut costs by up to 70%.
+- **Amazon S3:** use S3 Storage Lens and lifecycle policies to move data to the cheapest class that still fits, such as Glacier Instant Retrieval. The session cited savings of up to 70% for data that fits a colder class.
 
 Regularly delete unattached EBS volumes and obsolete snapshots. They cost money and do nothing.
 
@@ -30,6 +30,6 @@ The Frugal Architect mindset: design, measure, optimize. In practice:
 - Choose cost-effective resources, such as Graviton and Spot Instances.
 - Keep optimizing: automate decommissioning and review workloads regularly.
 
-## The big picture
+## In short
 
-Cost optimization isn't just cutting costs. It's getting the most value while keeping performance and scalability. Cloud Intelligence Dashboards, Compute Optimizer and Trusted Advisor let you make those calls with data.
+The session framed cost work as a trade-off against performance and scalability, not only as cutting. Cloud Intelligence Dashboards, Compute Optimizer and Trusted Advisor provide the data for those trade-offs.

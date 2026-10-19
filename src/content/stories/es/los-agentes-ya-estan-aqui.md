@@ -9,13 +9,13 @@ translationKey: strands-agents
 
 "Los agentes de IA no son el futuro. Ya están cambiando cómo construimos en la nube."
 
-Esa fue mi principal conclusión de la sesión de AWS Experience Iberia *Building AI agents with serverless, Strands and MCP* el mes pasado. Pasamos de experimentar con prompts a operar en producción sistemas agénticos que razonan, planifican y actúan, de forma segura y a escala.
+Así abrió la sesión de AWS Experience Iberia *Building AI agents with serverless, Strands and MCP* el mes pasado. La sesión trató sobre agentes en producción: sistemas que llaman a herramientas y a otros servicios, no solo prompts.
 
-El equipo de AWS mostró cómo encajan las arquitecturas serverless, Amazon Bedrock y el SDK de Strands Agents para que los agentes sean capaces y baratos de operar. Lo que más me resonó:
+El equipo de AWS mostró cómo encajan las arquitecturas serverless, Amazon Bedrock y el SDK de Strands Agents para ejecutar agentes. Mis notas:
 
-- **Los agentes son modulares.** Razonan, usan herramientas y hablan con otros sistemas a través del Model Context Protocol, y Strands Agents lo hace sencillo de implementar.
-- **Serverless quita el trabajo que no aporta.** Desplegar agentes en Lambda, ECS o EKS es enfocarse en la lógica, no en los servidores.
+- **Los agentes son modulares.** Razonan, usan herramientas y hablan con otros sistemas a través del Model Context Protocol, y Strands Agents ofrece las piezas para hacerlo.
+- **Serverless reduce el trabajo de infraestructura.** Ejecutar agentes en Lambda, ECS o EKS deja menos servidores que gestionar.
 - **La observabilidad y la gobernanza siguen importando.** CloudWatch, X-Ray, GuardDuty e IAM van en el diseño desde el primer día.
-- **El contexto lo es todo.** Un buen contexto lleva a buenas respuestas.
+- **El contexto define las respuestas.** Lo que recibe el agente importa tanto como el modelo.
 
-Si estás explorando flujos agénticos, el [material de Strands Agents](https://lnkd.in/dF2rgAxA) es un buen punto de partida.
+El [material de Strands Agents](https://lnkd.in/dF2rgAxA) de la sesión.

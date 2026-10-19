@@ -9,13 +9,13 @@ translationKey: strands-agents
 
 "AI agents are not the future. They're already reshaping how we build in the cloud."
 
-That was my main takeaway from the AWS Experience Iberia session *Building AI agents with serverless, Strands and MCP* last month. We've moved from experimenting with prompts to running agentic systems in production that reason, plan and take action, securely and at scale.
+That was how the AWS Experience Iberia session *Building AI agents with serverless, Strands and MCP* opened last month. The session was about agents in production: systems that call tools and other services, not only prompts.
 
-The AWS team showed how serverless architectures, Amazon Bedrock and the Strands Agents SDK fit together to make agents both capable and cheap to operate. What resonated:
+The AWS team showed how serverless architectures, Amazon Bedrock and the Strands Agents SDK fit together to run agents. My notes:
 
-- **Agents are modular.** They reason, use tools and talk to other systems through the Model Context Protocol, and Strands Agents makes that straightforward to implement.
-- **Serverless removes the undifferentiated work.** Deploying agents on Lambda, ECS or EKS means focusing on logic, not servers.
+- **Agents are modular.** They reason, use tools and talk to other systems through the Model Context Protocol, and Strands Agents provides the building blocks for it.
+- **Serverless reduces the infrastructure work.** Running agents on Lambda, ECS or EKS leaves less server management.
 - **Observability and governance still matter.** CloudWatch, X-Ray, GuardDuty and IAM belong in the design from day one.
-- **Context is everything.** Great context leads to great answers.
+- **Context shapes the answers.** What the agent receives matters as much as the model.
 
-If you're exploring agentic workflows, the [Strands Agents material](https://lnkd.in/dF2rgAxA) is a good place to start.
+The session's [Strands Agents material](https://lnkd.in/dF2rgAxA).

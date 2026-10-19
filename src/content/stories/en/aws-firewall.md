@@ -9,18 +9,16 @@ translationKey: aws-firewall
 
 "Stop sending all your traffic through a single firewall."
 
-That line from the AWS Experience Iberia virtual session last month sums up how cloud security is changing. It's no longer about blocking everything. It's about building agility and visibility into every layer.
+That line, from an AWS Experience Iberia virtual session last month, was the main argument of the talk: spread protection across layers instead of concentrating it in one inspection point.
 
-The session, *Firewalls on AWS: when and how to protect your infrastructure*, went deep on network protection patterns and scaling securely. What stood out to me:
+The session, *Firewalls on AWS: when and how to protect your infrastructure*, covered network protection patterns and how they scale. My notes:
 
 - **Shared responsibility is the foundation.** AWS secures the cloud; we secure what we put in it.
 - **Layered protection.** AWS WAF, Shield, Network Firewall and Firewall Manager together cover layers 3 to 7.
 - **Centralized and distributed inspection.** Each model trades off cost, performance and blast radius differently.
-- **Automation and observability.** Security Hub, GuardDuty, Inspector and Systems Manager make remediation proactive instead of reactive.
+- **Automation and observability.** Security Hub, GuardDuty, Inspector and Systems Manager automate detection and remediation, so fewer issues wait for someone to notice them.
 
-Security on AWS doesn't slow innovation down. Done well, it's what lets you move fast safely.
-
-If you build on AWS, the session material is worth your time:
+The session material:
 
 - [Session material, part 1](https://lnkd.in/dGHJcKgY)
 - [Session material, part 2](https://lnkd.in/dx2_K35G)
