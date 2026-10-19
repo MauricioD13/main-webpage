@@ -24,7 +24,7 @@ import ArchDiagram from "@/components/visual/ArchDiagram.astro";
 import Callout from "@/components/visual/Callout.astro";
 import { singleServer, threeTier } from "@/data/diagrams";
 
-A sudden server crash is every developer's nightmare, and that's where this one starts. One afternoon the server went down without warning. It ran Nginx as a reverse proxy in front of a PHP Laravel backend, a setup that had been stable until then.
+This one starts with an outage. One afternoon the server went down without warning. It ran Nginx as a reverse proxy in front of a PHP Laravel backend, a setup that had been stable until then.
 
 <Scrolly>
   <ArchDiagram slot="stage" panel="before" diagram={singleServer} title="Before: one server, one target" plate="Fig. 2.1" />

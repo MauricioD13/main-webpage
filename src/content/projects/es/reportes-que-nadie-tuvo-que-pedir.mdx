@@ -25,7 +25,7 @@ import { dataPipelineEs } from "@/data/diagrams.es";
 
 Odoo es un ERP sólido, con funciones para llevar casi todo un negocio, pero analizar datos no es una de ellas, sobre todo cuando las tablas crecen. Se podría decir que es injusto: hay módulos de la comunidad que añaden reportes. En la práctica, instalarlos es demasiado para el personal no técnico, y alguien tiene que mantenerlos. Es una carga pesada cuando el equipo técnico es pequeño y ya va justo, que era exactamente mi caso.
 
-Lo que sí tiene Odoo es una API JSON capaz de extraer los datos en bruto. Empecé a escribir scripts de Python contra ella para convertir los datos de facturación y ventas en reportes sencillos. Tras unas cuantas pruebas quedó claro que podían aportar valor real, así que me centré primero en algo útil para el equipo de ventas.
+Lo que sí tiene Odoo es una API JSON capaz de extraer los datos en bruto. Empecé a escribir scripts de Python contra ella para convertir los datos de facturación y ventas en reportes sencillos. Tras unas cuantas pruebas los reportes resultaron útiles, así que me centré primero en algo para el equipo de ventas.
 
 <Scrolly>
   <ArchDiagram slot="stage" diagram={dataPipeline} i18n={dataPipelineEs} title="De Odoo a los dashboards" plate="Fig. 4.1" caption="Toca o pasa el cursor sobre un componente para ver detalles." />
@@ -65,7 +65,7 @@ Lo que sí tiene Odoo es una API JSON capaz de extraer los datos en bruto. Empec
 
 ## Lo que cambió
 
-Ahora el negocio puede cruzar sus datos con libertad, ejecutando SQL complejo sobre todo el conjunto, y la plataforma de autoservicio hace que ese poder no dependa de mí.
+Ahora el equipo puede consultar todo el conjunto de datos con SQL y armar sus propios dashboards, sin esperar a que yo escriba un reporte.
 
 <Callout>
   Es un patrón que veo a menudo: los reportes "suficientes" que vienen con un sistema dejan de serlo en cuanto la gente empieza a usar de verdad sus datos.

@@ -24,7 +24,7 @@ import { dataPipeline } from "@/data/diagrams";
 
 Odoo is a strong ERP with features for running most of a business, but analyzing data isn't one of them, especially once tables get large. You could say that's unfair: there are community modules that add reporting. In practice, installing them is too much for non-technical staff, and someone has to maintain them. That's a heavy burden when the tech team is small and already stretched, which is exactly where I was.
 
-Odoo does have a capable JSON API for pulling raw data. I started writing Python scripts against it to turn billing and sales data into simple reports. After a few trials it was clear these could bring real value, so I focused first on something useful for the sales team.
+Odoo does have a capable JSON API for pulling raw data. I started writing Python scripts against it to turn billing and sales data into simple reports. After a few trials the reports proved useful, so I focused first on something for the sales team.
 
 <Scrolly>
   <ArchDiagram slot="stage" diagram={dataPipeline} title="Odoo to dashboards" plate="Fig. 4.1" caption="Tap or hover a component for details." />
@@ -64,7 +64,7 @@ Odoo does have a capable JSON API for pulling raw data. I started writing Python
 
 ## What it changed
 
-The business can now cross-reference its data freely, running complex SQL over the full dataset, and the self-service platform means that power isn't bottlenecked on me.
+The team can now query the full dataset with SQL and build its own dashboards, without waiting for me to write a report.
 
 <Callout>
   It's a pattern I see a lot: the "good enough" reporting that ships with a system stops being good enough as soon as people actually start using their data.

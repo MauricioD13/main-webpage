@@ -34,7 +34,7 @@ Por casualidad empecé a trabajar con una tienda de e-commerce alojada en AWS. S
   <ArchDiagram slot="stage" diagram={backupDisk} i18n={backupDiskEs} title="La tienda, tal como la encontré" plate="Fig. 1.1" caption="Toca o pasa el cursor sobre un componente para ver detalles." />
 
   <Step focus="users,ec2">
-    Toda la tienda corría en una sola instancia EC2: Ubuntu, Apache, Magento. El tipo de instancia era una **c6i.2xlarge**, un monstruo para esta carga. Incluso en los días de más venta, Navidad incluida, la CPU no pasaba del 20 %. A los dueños les habían dicho que el desarrollo no funcionaría en algo más pequeño.
+    Toda la tienda corría en una sola instancia EC2: Ubuntu, Apache, Magento. El tipo de instancia era una **c6i.2xlarge**, mucho más grande de lo que esta carga necesitaba. Incluso en los días de más venta, Navidad incluida, la CPU no pasaba del 20 %. A los dueños les habían dicho que el desarrollo no funcionaría en algo más pequeño.
   </Step>
 
   <Step focus="ec2,disk" show="disk">

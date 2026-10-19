@@ -33,7 +33,7 @@ By coincidence, I started working with an e-commerce shop hosted on AWS. Their p
   <ArchDiagram slot="stage" diagram={backupDisk} title="The shop, as I found it" plate="Fig. 1.1" caption="Tap or hover a component for details." />
 
   <Step focus="users,ec2">
-    The whole shop ran on one EC2 instance: Ubuntu, Apache, Magento. The instance type was a **c6i.2xlarge**, a monster for this workload. Even on the busiest days, Christmas included, CPU peaked at about 20%. The owners had been told the development wouldn't work on anything smaller.
+    The whole shop ran on one EC2 instance: Ubuntu, Apache, Magento. The instance type was a **c6i.2xlarge**, far larger than this workload needed. Even on the busiest days, Christmas included, CPU peaked at about 20%. The owners had been told the development wouldn't work on anything smaller.
   </Step>
 
   <Step focus="ec2,disk" show="disk">
