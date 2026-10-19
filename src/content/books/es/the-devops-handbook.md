@@ -3,7 +3,7 @@
 # Pon draft: false para publicarla junto con la versión en inglés.
 title: "Notas sobre The DevOps Handbook"
 date: 2024-11-10
-draft: true
+draft: false
 book:
   title: "The DevOps HandBook"
   author: "Gene Kim, Jez Humble, Patrick Debois & John Willis"

@@ -3,7 +3,7 @@
 # Pon draft: false para publicarla junto con la versión en inglés.
 title: "Notas sobre Never Split The Difference"
 date: 2026-07-15
-draft: true
+draft: false
 book:
   title: "Never Split The Difference"
   author: "Chris Voss"

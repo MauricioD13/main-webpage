@@ -2,7 +2,7 @@
 # EXAMPLE ENTRY: replace the notes with your own, then set draft: false to publish.
 title: "Notes on Never Split The Difference"
 date: 2026-07-15
-draft: true
+draft: false
 book:
   title: "Never Split The Difference"
   author: "Chris Voss"

@@ -2,7 +2,7 @@
 # EXAMPLE ENTRY: replace the notes with your own, then set draft: false to publish.
 title: "Notes on The Unicorn Project"
 date: 2026-09-01
-draft: true
+draft: false
 book:
   title: "The Unicorn Project"
   author: "Gene Kim"

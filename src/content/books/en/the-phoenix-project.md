@@ -2,7 +2,7 @@
 # EXAMPLE ENTRY: replace the notes with your own, then set draft: false to publish.
 title: "Notes on The Phoenix Project"
 date: 2026-09-01
-draft: true
+draft: false
 book:
   title: "The Phoenix Project"
   author: "Gene Kim, Kevin Behr, George Spafford"
