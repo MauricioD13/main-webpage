@@ -64,6 +64,7 @@ The owner approved this style (DDR 0001); keep new pages and components inside i
 - Photos use `MonoImage.astro` (grayscale until hover). Plates are black line-art (`.plate`) in any section, with white strokes and labels; long-form text uses `.prose-site`, and plate styles must out-rank Tailwind Typography's.
 - Pages whose first section is a full-bleed dark hero pass `overlayHeader` to `Base.astro`, so the header floats transparently over it and turns near-black once scrolled.
 - Copy: plain, sentence case, no em-dash label constructions or middle-dot meta strings; numbers only from real sources (see Content rules).
+- Tone: describe, don't sell. The site lets the projects and their stories speak for the engineer; copy states what was done, with what and why. No marketing claims, superlatives or pitches ("built to survive anything", "tell me what you're running"), no promises of results.
 
 ## Motion and animation
 
