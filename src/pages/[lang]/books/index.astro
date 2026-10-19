@@ -294,6 +294,7 @@ const spine = (pages = 320) => ({
 <script>
   import { gsap, reducedMotion } from "../../../scripts/motion";
 
+  const posthog = (window as Window & { posthog?: { capture: (event: string, properties?: Record<string, string>) => void } }).posthog;
   const slot = document.querySelector<HTMLElement>("[data-detail-slot]");
   const filters = document.querySelector<HTMLElement>("[data-filters]");
 
@@ -322,7 +323,10 @@ const spine = (pages = 320) => ({
           gsap.from(slot.querySelector(".pulled-body"), { opacity: 0, x: 16, duration: 0.5, delay: 0.15 });
         }
         // Only follow real clicks; the first book opens on load without moving the page.
-        if (e.isTrusted) slot.scrollIntoView({ block: "nearest", behavior: reducedMotion() ? "auto" : "smooth" });
+        if (e.isTrusted) {
+          posthog?.capture("book_preview_opened", { book_id: spine.dataset.book! });
+          slot.scrollIntoView({ block: "nearest", behavior: reducedMotion() ? "auto" : "smooth" });
+        }
       });
     }
   }
@@ -336,6 +340,7 @@ const spine = (pages = 320) => ({
       btn.addEventListener("click", () => {
         buttons.forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
         const f = btn.dataset.filter;
+        if (f) posthog?.capture("book_filter_selected", { category: f });
         document.querySelectorAll<HTMLElement>("[data-shelf]").forEach((s) => (s.hidden = f !== "all" && s.dataset.shelf !== f));
       });
     }

@@ -16,7 +16,7 @@ const t = useTranslations(lang);
   {
     items.map(({ entry, fallback }) => (
       <li>
-        <a href={localePath(lang, `stories/${entrySlug(entry.id)}`)} class="story">
+        <a href={localePath(lang, `stories/${entrySlug(entry.id)}`)} class="story" data-story={entrySlug(entry.id)}>
           {entry.data.cover && <MonoImage src={entry.data.cover} alt="" class="thumb" widths={[240, 480]} sizes="240px" />}
           <span class="main">
             <span class="meta label">
@@ -90,3 +90,12 @@ const t = useTranslations(lang);
     }
   }
 </style>
+
+<script>
+  const posthog = (window as Window & { posthog?: { capture: (event: string, properties?: Record<string, string>) => void } }).posthog;
+
+  for (const story of document.querySelectorAll<HTMLAnchorElement>("[data-story]"))
+    story.addEventListener("click", () => {
+      posthog?.capture("story_opened", { story_slug: story.dataset.story! });
+    });
+</script>

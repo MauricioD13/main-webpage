@@ -159,3 +159,6 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Instructions left by the PostHog wizard
+.claude/skills/

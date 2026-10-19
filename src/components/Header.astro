@@ -162,8 +162,11 @@ const nav = [
 <script>
   import { ScrollTrigger } from "../scripts/motion";
 
+  const posthog = (window as Window & { posthog?: { capture: (event: string, properties?: Record<string, string>) => void } }).posthog;
+
   for (const a of document.querySelectorAll<HTMLAnchorElement>("a[hreflang]"))
     a.addEventListener("click", () => {
+      posthog?.capture("language_changed", { language: a.hreflang });
       try {
         localStorage.setItem("lang", a.hreflang);
       } catch {}

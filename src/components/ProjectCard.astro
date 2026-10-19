@@ -22,7 +22,7 @@ const plate = projectPlates[d.translationKey as keyof typeof projectPlates];
 const href = localePath(lang, `projects/${entrySlug(entry.id)}`);
 ---
 
-<a href={href} class:list={["project-card", { feature }]}>
+<a href={href} class:list={["project-card", { feature }]} data-project={entrySlug(entry.id)}>
   <div class="media" aria-hidden="true">
     {
       plate ? (
@@ -175,3 +175,12 @@ const href = localePath(lang, `projects/${entrySlug(entry.id)}`);
     transform: translateX(4px);
   }
 </style>
+
+<script>
+  const posthog = (window as Window & { posthog?: { capture: (event: string, properties?: Record<string, string>) => void } }).posthog;
+
+  for (const card of document.querySelectorAll<HTMLAnchorElement>("[data-project]"))
+    card.addEventListener("click", () => {
+      posthog?.capture("project_opened", { project_slug: card.dataset.project! });
+    });
+</script>

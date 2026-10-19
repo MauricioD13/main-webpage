@@ -79,8 +79,8 @@ const reading = (await getLocalizedEntries("books", lang)).filter(({ entry }) =>
       <div class="mt-12 grid gap-10 lg:grid-cols-3">
         <p class="lede lg:col-span-2 lg:max-w-2xl">{t("home.contact.body")}</p>
         <div class="flex flex-wrap items-start gap-3 lg:justify-end">
-          <a href="https://www.linkedin.com/in/mauricio-cuello-/" class="btn btn-primary" rel="me">{t("home.contact.cta")}</a>
-          <a href="https://github.com/MauricioD13" class="btn btn-ghost" rel="me">GitHub</a>
+          <a href="https://www.linkedin.com/in/mauricio-cuello-/" class="btn btn-primary" rel="me" data-contact-channel="linkedin">{t("home.contact.cta")}</a>
+          <a href="https://github.com/MauricioD13" class="btn btn-ghost" rel="me" data-contact-channel="github">GitHub</a>
         </div>
       </div>
     </div>
@@ -94,3 +94,12 @@ const reading = (await getLocalizedEntries("books", lang)).filter(({ entry }) =>
       var(--void);
   }
 </style>
+
+<script>
+  const posthog = (window as Window & { posthog?: { capture: (event: string, properties?: Record<string, string>) => void } }).posthog;
+
+  for (const link of document.querySelectorAll<HTMLAnchorElement>("[data-contact-channel]"))
+    link.addEventListener("click", () => {
+      posthog?.capture("contact_outbound_clicked", { channel: link.dataset.contactChannel! });
+    });
+</script>
