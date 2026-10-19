@@ -8,3 +8,5 @@ node_modules/
 *.log
 .playwright-mcp/
 *.swp
+prompt-*.md
+LogoTribu_Ops_B-sin_.svg
