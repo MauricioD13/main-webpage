@@ -97,15 +97,16 @@ With the platform in place, the other half of the goal was getting new versions 
   <ArchDiagram slot="stage" diagram={ecsDelivery} title="Merge to running service" plate="Fig. 3.3" caption="Tap or hover a component for details." />
 
   <Step focus="users,alb,ecs" show="ecs,alb,users,cw">
-    The destination was ready: the **ECS** service behind the load balancer, with its logs in CloudWatch. What was missing was a reliable way to ship to it.
+    The destination was ready: the **ECS** service behind the load balancer, with its logs in CloudWatch. What was missing was a reliable way to ship to it. 
+    As I mentioned before, the ECS API has been battle tested, so it was easy to create a basic pipeline.
   </Step>
 
   <Step focus="dev,ci" show="dev,ci">
-    Then the trigger. A merge to the main branch starts the **pipeline**: build the image, run the tests. If the tests fail, nothing ships.
+    First, the trigger. A merge to the main branch starts the **pipeline**: build the image, run the tests. If the tests fail, nothing ships. 
   </Step>
 
   <Step focus="ci,ecr,ecs" show="ecr">
-    A green build pushes the image to the **registry** and deploys it to ECS with a **rolling** update: new tasks have to pass health checks before the old ones stop, so users never see a gap.
+    A green build pushes the image to the **registry**, in this case ECR, this requires access to AWS, and to avoid the problem of long-term credentials, use the connection through an OIDC provider. Then, deploys it to ECS with a **rolling** update: gather the running task definition, modify it with the new image tag, and create the new tasks which have to pass health checks before the old ones stop, so users never see a gap.
   </Step>
 
   <Step focus="dev,ci,ecr,ecs,alb,users">
