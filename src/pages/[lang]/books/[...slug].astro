@@ -6,6 +6,7 @@ import Rating from "../../../components/Rating.astro";
 import FallbackNotice from "../../../components/FallbackNotice.astro";
 import { langs, type Lang } from "../../../i18n/ui";
 import { entryLang, entrySlug, formatDate, getAlternates, getLocalizedEntries, localePath, useTranslations } from "../../../i18n/utils";
+import { getBookColors } from "../../../lib/books";
 
 export async function getStaticPaths() {
   const paths = [];
@@ -23,6 +24,7 @@ const d = entry.data;
 const alternates = await getAlternates("books", "books", d.translationKey);
 // Related projects are referenced in the entry's own language; link them under the reader's locale.
 const related = (await getEntries(d.relatedProjects)).filter(Boolean);
+const color = await getBookColors();
 ---
 
 <Base lang={lang} canonicalPath={fallback ? alternates.en : undefined} title={d.book.title} description={`${d.title}. ${d.takeaways[0] ?? ""}`} alternates={alternates} ogType="article" section="books">
@@ -31,7 +33,7 @@ const related = (await getEntries(d.relatedProjects)).filter(Boolean);
     <a href={localePath(lang, "books")} class="pill no-underline">{t("post.back")} {t("nav.books").toLowerCase()}</a>
     <div class="mt-8 grid gap-10 md:grid-cols-[14rem_minmax(0,1fr)] md:gap-14">
       <div>
-        <BookCover book={d.book} color={d.spine} class="book-cover w-44 md:w-full" />
+        <BookCover book={d.book} color={color(d.translationKey)} class="book-cover w-44 md:w-full" />
         <dl class="mt-6 space-y-3 text-sm">
           <div>
             <dt class="label">{t(`books.${d.category}`)}</dt>

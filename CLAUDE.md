@@ -104,6 +104,7 @@ Principles: one orchestrated entrance per page (the home hero); everything else 
 
 ## Content rules
 - Stats, chart values and capability claims (`src/data/capabilities.ts`, each linked to proving projects) must come from the author's own material (the original case studies came from `../base`); don't invent metrics. Chart captions say what the data is (e.g. "indexed, not in dollars").
+- Book categories (`tech`, `business`, `literature`) are the shelves on `/books`, ordered by `bookCategories` in `src/lib/books.ts`. A book's colour comes from `getBookColors()`, one per `translationKey` with the English `spine` winning, so spines and covers match in both languages (DDR 0007).
 - Book entries are the author's opinions. The current entries are examples with `draft: true`; don't publish or fill in opinions on the author's behalf.
 
 

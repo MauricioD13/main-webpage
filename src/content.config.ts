@@ -53,12 +53,14 @@ const books = defineCollection({
         pages: z.number().int().optional(),
         cover: image().optional(),
       }),
-      category: z.enum(["tech", "business"]),
+      // Each category is a shelf on /books, in the order of `bookCategories` (src/lib/books.ts).
+      category: z.enum(["tech", "business", "literature"]),
       status: z.enum(["reading", "finished", "queued"]),
       rating: z.number().min(0).max(5).optional(),
       takeaways: z.array(z.string()).default([]),
       quotes: z.array(z.string()).default([]),
       relatedProjects: z.array(reference("projects")).default([]),
+      /** Cloth colour, shared by every translation: the English entry's value wins. */
       spine: z.string().optional(),
     }),
 });

@@ -10,6 +10,7 @@ import Headline from "../../components/Headline.astro";
 import type { Lang } from "../../i18n/ui";
 import { entrySlug, getLocalizedEntries, localePath, useTranslations } from "../../i18n/utils";
 import { localeStaticPaths } from "../../lib/paths";
+import { getBookColors } from "../../lib/books";
 import { personLd, websiteLd } from "../../lib/seo";
 
 export const getStaticPaths = localeStaticPaths;
@@ -19,6 +20,7 @@ const t = useTranslations(lang);
 const projects = (await getLocalizedEntries("projects", lang)).sort((a, b) => a.entry.data.order - b.entry.data.order);
 const stories = (await getLocalizedEntries("stories", lang)).sort((a, b) => b.entry.data.date.valueOf() - a.entry.data.date.valueOf()).slice(0, 3);
 const reading = (await getLocalizedEntries("books", lang)).filter(({ entry }) => entry.data.status === "reading");
+const bookColor = await getBookColors();
 ---
 
 <Base lang={lang} alternates={{ en: "/en/", es: "/es/" }} overlayHeader jsonLd={[personLd(Astro.site!, lang), websiteLd(Astro.site!, lang)]}>
@@ -55,7 +57,7 @@ const reading = (await getLocalizedEntries("books", lang)).filter(({ entry }) =>
               {reading.map(({ entry }) => (
                 <li>
                   <a href={localePath(lang, `books/${entrySlug(entry.id)}`)} class="group flex items-start gap-5 no-underline">
-                    <BookCover book={entry.data.book} class="w-24 shrink-0" />
+                    <BookCover book={entry.data.book} color={bookColor(entry.data.translationKey)} class="w-24 shrink-0" />
                     <span>
                       <span class="block text-lg leading-snug group-hover:underline">{entry.data.book.title}</span>
                       <span class="label mt-1 block">{entry.data.book.author}</span>

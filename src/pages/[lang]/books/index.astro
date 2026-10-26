@@ -6,6 +6,7 @@ import Headline from "../../../components/Headline.astro";
 import type { Lang } from "../../../i18n/ui";
 import { entrySlug, getLocalizedEntries, localePath, useTranslations } from "../../../i18n/utils";
 import { localeStaticPaths } from "../../../lib/paths";
+import { bookCategories, getBookColors } from "../../../lib/books";
 
 export const getStaticPaths = localeStaticPaths;
 
@@ -15,12 +16,14 @@ const statusOrder = { reading: 0, finished: 1, queued: 2 } as const;
 const items = (await getLocalizedEntries("books", lang)).sort(
   (a, b) => statusOrder[a.entry.data.status] - statusOrder[b.entry.data.status] || b.entry.data.date.valueOf() - a.entry.data.date.valueOf(),
 );
-const shelves = (["tech", "business"] as const).map((category) => ({
-  category,
-  label: t(`books.${category}`),
-  books: items.filter((i) => i.entry.data.category === category),
-}));
-const palette = ["#1c3f73", "#2f5d50", "#7a3b2e", "#4a4f6a", "#6b5a2a", "#3b2f55"];
+const shelves = bookCategories
+  .map((category) => ({
+    category,
+    label: t(`books.${category}`),
+    books: items.filter((i) => i.entry.data.category === category),
+  }))
+  .filter((shelf) => shelf.books.length > 0);
+const color = await getBookColors();
 // Spine size follows page count so the shelf looks like a real one.
 const spine = (pages = 320) => ({
   h: Math.round(Math.min(300, Math.max(210, 180 + pages / 5))),
@@ -42,7 +45,7 @@ const spine = (pages = 320) => ({
       ) : (
         <>
           <div class="filters mt-14" role="group" aria-label={t("books.filter")} data-filters hidden>
-            {(["all", "tech", "business"] as const).map((f, i) => (
+            {(["all", ...shelves.map((s) => s.category)] as const).map((f, i) => (
               <button type="button" data-filter={f} aria-pressed={i === 0 ? "true" : "false"}>
                 {t(`books.${f}`)}
               </button>
@@ -50,49 +53,45 @@ const spine = (pages = 320) => ({
           </div>
 
           <div class="shelves mt-10">
-          {shelves.map(
-            (shelf) =>
-              shelf.books.length > 0 && (
-                <section class="shelf-block" data-shelf={shelf.category} aria-labelledby={`shelf-${shelf.category}`}>
-                  <h2 id={`shelf-${shelf.category}`} class="label">
-                    {shelf.label}
-                  </h2>
-                  <ul class="shelf">
-                    {shelf.books.map(({ entry }, i) => {
-                      const d = entry.data;
-                      const s = spine(d.book.pages);
-                      const color = d.spine ?? palette[i % palette.length];
-                      return (
-                        <li class="spine-wrap">
-                          <a
-                            href={localePath(lang, `books/${entrySlug(entry.id)}`)}
-                            class="spine"
-                            style={`--h:${s.h}px;--w:${s.w}px;--cloth:${color}`}
-                            data-book={entry.id}
-                            aria-describedby={`status-${entry.id.replace("/", "-")}`}
-                          >
-                            <span class="spine-title">{d.book.title}</span>
-                            <span class="spine-author">{d.book.author.split(",")[0]}</span>
-                            {d.status === "reading" && <span class="bookmark" aria-hidden="true" />}
-                          </a>
-                          <span id={`status-${entry.id.replace("/", "-")}`} class="sr-only">
-                            {t(`books.${d.status}`)}
-                          </span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </section>
-              ),
-          )}
+          {shelves.map((shelf) => (
+            <section class="shelf-block" data-shelf={shelf.category} aria-labelledby={`shelf-${shelf.category}`}>
+              <h2 id={`shelf-${shelf.category}`} class="label">
+                {shelf.label}
+              </h2>
+              <ul class="shelf">
+                {shelf.books.map(({ entry }) => {
+                  const d = entry.data;
+                  const s = spine(d.book.pages);
+                  return (
+                    <li class="spine-wrap">
+                      <a
+                        href={localePath(lang, `books/${entrySlug(entry.id)}`)}
+                        class="spine"
+                        style={`--h:${s.h}px;--w:${s.w}px;--cloth:${color(d.translationKey)}`}
+                        data-book={entry.id}
+                        aria-describedby={`status-${entry.id.replace("/", "-")}`}
+                      >
+                        <span class="spine-title">{d.book.title}</span>
+                        <span class="spine-author">{d.book.author.split(",")[0]}</span>
+                        {d.status === "reading" && <span class="bookmark" aria-hidden="true" />}
+                      </a>
+                      <span id={`status-${entry.id.replace("/", "-")}`} class="sr-only">
+                        {t(`books.${d.status}`)}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
           </div>
 
-          {items.map(({ entry }, i) => {
+          {items.map(({ entry }) => {
             const d = entry.data;
             return (
               <template data-detail={entry.id}>
                 <div class="pulled">
-                  <BookCover book={d.book} color={d.spine ?? palette[i % palette.length]} class="pulled-cover" />
+                  <BookCover book={d.book} color={color(d.translationKey)} class="pulled-cover" />
                   <div class="pulled-body">
                     <p class="pill">{t(`books.${d.status}`)}</p>
                     <h3 class="display mt-4 text-[clamp(2rem,3.4vw,3rem)]">{d.book.title}</h3>
@@ -141,6 +140,7 @@ const spine = (pages = 320) => ({
   }
   .filters {
     display: flex;
+    flex-wrap: wrap;
     gap: 0.4rem;
   }
   .filters[hidden] {

@@ -12,7 +12,7 @@ book:
 category: business
 status: finished
 rating: 4
-spine: "#1c3f73"
+spine: "#009FE3"
 takeaways:
   - "El trabajo no planificado es el asesino silencioso de cualquier plan."
   - "El trabajo en curso es invisible hasta que lo haces visible."
