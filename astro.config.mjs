@@ -11,6 +11,9 @@ const site = process.env.SITE_URL ?? "https://tech-histories.pages.dev";
 export default defineConfig({
   site,
   trailingSlash: "ignore",
+  // The CSS (~8 KB gzipped) was the only render-blocking request; inlined, the first paint
+  // needs only the HTML. Most visits read one or two pages, so caching it separately saves little.
+  build: { inlineStylesheets: "always" },
   devToolbar: { enabled: false },
   i18n: {
     locales: ["en", "es"],
@@ -35,7 +38,7 @@ export default defineConfig({
       cssVariable: "--font-instrument",
       provider: fontProviders.google(),
       weights: [400],
-      styles: ["normal", "italic"],
+      styles: ["italic"],
       subsets: ["latin", "latin-ext"],
       fallbacks: ["Georgia", "serif"],
     },

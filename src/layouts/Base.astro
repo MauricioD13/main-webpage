@@ -94,8 +94,9 @@ const ld = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
     {ld.map((data) => <script type="application/ld+json" set:html={JSON.stringify(data)} />)}
     <meta name="theme-color" content="#000000" />
     <PostHog />
-    <Font cssVariable="--font-archivo" preload />
-    <Font cssVariable="--font-instrument" preload />
+    <!-- Only the latin files: English and Spanish never reach latin-ext, which loads on demand. -->
+    <Font cssVariable="--font-archivo" preload={[{ subset: "latin" }]} />
+    <Font cssVariable="--font-instrument" preload={[{ subset: "latin" }]} />
   </head>
   <body>
     <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[60] focus:rounded-full focus:bg-white focus:px-4 focus:py-2 focus:text-black">
