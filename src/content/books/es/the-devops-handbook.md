@@ -1,11 +1,11 @@
 ---
-# Traducción de las notas en inglés (src/content/books/en/designing-data-intensive-applications.md).
+# Traducción de las notas en inglés (src/content/books/en/the-devops-handbook.md).
 # Pon draft: false para publicarla junto con la versión en inglés.
 title: "Notas sobre The DevOps Handbook"
 date: 2024-11-10
 draft: false
 book:
-  title: "The DevOps HandBook"
+  title: "The DevOps Handbook"
   author: "Gene Kim, Jez Humble, Patrick Debois & John Willis"
   year: 2016
   pages: 421
